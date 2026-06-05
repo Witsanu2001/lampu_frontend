@@ -2,12 +2,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/shared/ui/App.tsx
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom"; 
-import { auth } from "../../modules/const/firebase"; 
-import { getRedirectResult, FacebookAuthProvider, updateProfile, signInWithCustomToken } from "firebase/auth";
+import { Link, useLocation } from "react-router-dom";
+import { auth } from "../../modules/const/firebase";
+import {
+  getRedirectResult,
+  FacebookAuthProvider,
+  updateProfile,
+  signInWithCustomToken,
+} from "firebase/auth";
 import liff from "@line/liff";
 import AppRoutes from "../../app/routes";
-import '../../style/App.css';
+import "../../style/App.css";
 
 import Header from "./Header";
 import { menuConfig, type MenuItem } from "./menu";
@@ -40,20 +45,26 @@ export default function App() {
 
   const handleLineUserData = async () => {
     try {
-      const lineIdToken = liff.getIDToken(); 
-      
+      const lineIdToken = liff.getIDToken();
+
       if (lineIdToken) {
-        const res = await fetch("https://api-gateway-879165280409.asia-southeast1.run.app/api/auth/line", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id_token: lineIdToken })
-        });
-        
+        const res = await fetch(
+          "https://api-gateway-879165280409.asia-southeast1.run.app/api/auth/line",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id_token: lineIdToken }),
+          },
+        );
+
         if (!res.ok) throw new Error("แลกโทเค็นไม่สำเร็จ");
         const data = await res.json();
-        
-        const userCredential = await signInWithCustomToken(auth, data.firebase_token);
-        
+
+        const userCredential = await signInWithCustomToken(
+          auth,
+          data.firebase_token,
+        );
+
         const profile = await liff.getProfile();
         const decodedToken = liff.getDecodedIDToken() as any;
         const lineUser = {
@@ -63,20 +74,23 @@ export default function App() {
           photoURL: profile.pictureUrl,
           provider: "line",
         };
-        
+
         setUser(lineUser);
         localStorage.setItem("userData", JSON.stringify(lineUser));
 
         const firebaseToken = await userCredential.user.getIdToken(true);
-        await fetch("https://api-gateway-879165280409.asia-southeast1.run.app/api/users/sync", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${firebaseToken}` 
+        await fetch(
+          "https://api-gateway-879165280409.asia-southeast1.run.app/api/users/sync",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${firebaseToken}`,
+            },
+            body: JSON.stringify(lineUser),
           },
-          body: JSON.stringify(lineUser)
-        });
-        
+        );
+
         console.log("✅ ล็อกอิน LINE + บันทึก Firestore สำเร็จ!");
       }
     } catch (err) {
@@ -117,7 +131,9 @@ export default function App() {
           const credential = FacebookAuthProvider.credentialFromResult(result);
           const token = credential?.accessToken;
           if (token) {
-            const response = await fetch(`https://graph.facebook.com/me?fields=picture.width(500).height(500)&access_token=${token}`);
+            const response = await fetch(
+              `https://graph.facebook.com/me?fields=picture.width(500).height(500)&access_token=${token}`,
+            );
             const data = await response.json();
             if (data?.picture?.data) {
               const realPicUrl = data.picture.data.url;
@@ -135,7 +151,8 @@ export default function App() {
           }
         }
       } catch (err: any) {
-        if (err.code !== "auth/redirect-cancelled-by-user") console.error(err.message);
+        if (err.code !== "auth/redirect-cancelled-by-user")
+          console.error(err.message);
       }
     };
     handleRedirectResult();
@@ -148,53 +165,66 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      
-      {/* Header */}
+    <div className="h-screen w-full flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+      {/* 1. Header */}
       {user && !isPaymentPage && <Header user={user} setUser={setUser} />}
-      
-      {/* 🌟 Navbar: เปลี่ยนจาก flex เฉยๆ เป็น hidden md:flex และเปลี่ยนเป็น flex-col */}
+
+      {/* 2. Mobile Menu Bar (แสดงเฉพาะมือถือและแท็บเล็ต - เอาไว้ใต้ Header) */}
       {user && !isPaymentPage && (
-        <nav className="flex flex-col shrink-0 px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 gap-4 shadow-sm z-10">
-          
-          {/* ส่วนเมนูหลัก */}
-          <div className="flex flex-wrap items-center gap-6">
-            {menuConfig.filter(hasPermission).map((item, index) => (
+        <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-50 bg-emerald-50 dark:bg-emerald-900/20 border-t border-emerald-100 dark:border-emerald-800 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] flex justify-around items-center p-2">
+          {menuConfig.filter(hasPermission).map((item, index) => {
+            const icon = item.label.split(" ")[0];
+            const isActive = location.pathname === item.to;
+            return (
               <Link
                 key={index}
                 to={item.to}
-                className="font-bold text-gray-800 dark:text-gray-100 text-[15px] hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
+                className={`flex flex-col items-center p-2 rounded-lg transition-all duration-200 hover:scale-110 ${
+                  isActive
+                    ? "bg-emerald-200 dark:bg-emerald-700/50 text-emerald-800 dark:text-emerald-300"
+                    : "text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-800/30"
+                }`}
               >
-                {item.label}
+                <span className="text-2xl">{icon}</span>
               </Link>
-            ))}
-          </div>
-
-          {/* ส่วนเมนูย่อย (Submenu) */}
-          <div className="flex flex-wrap gap-3 mt-1">
-            {menuConfig
-              .filter(hasPermission)
-              .filter((item) => item.submenu && item.submenu.length > 0)
-              .map((item) =>
-                item.submenu?.filter(hasPermission).map((subItem, subIndex) => (
-                  <Link
-                    key={`${item.to}-${subIndex}`}
-                    to={subItem.to}
-                    className="text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-4 py-1.5 rounded-lg transition-colors duration-200"
-                  >
-                    {subItem.label}
-                  </Link>
-                ))
-              )}
-          </div>
+            );
+          })}
         </nav>
       )}
-      
-      {/* Main Content */}
-      <main className="flex-1 overflow-hidden relative">
-        <AppRoutes user={user} setUser={setUser} />
-      </main>
-      
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* 2. Desktop Sidebar (แสดงเฉพาะหน้าจอคอมพิวเตอร์ขนาดใหญ่) */}
+        {user && !isPaymentPage && (
+          <aside className="hidden xl:flex flex-col w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-6 gap-8 overflow-y-auto">
+            <div className="flex flex-col gap-6">
+              {menuConfig.filter(hasPermission).map((item, index) => (
+                <div key={index} className="flex flex-col gap-2">
+                  <Link
+                    to={item.to}
+                    className="font-bold text-gray-700 dark:text-gray-300 hover:text-blue-600 transition-colors"
+                  >
+                    {item.label}
+                  </Link>
+                  {item.submenu?.filter(hasPermission).map((sub, sIndex) => (
+                    <Link
+                      key={sIndex}
+                      to={sub.to}
+                      className="ml-4 text-sm text-gray-500 dark:text-gray-400 hover:text-blue-500"
+                    >
+                      {sub.label}
+                    </Link>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </aside>
+        )}
+
+        {/* 3. Main Content */}
+        <main className={`flex-1 overflow-y-auto relative ${!isPaymentPage ? 'pb-20 xl:pb-0' : ''}`}>
+          <AppRoutes user={user} setUser={setUser} />
+        </main>
+      </div>
     </div>
   );
 }

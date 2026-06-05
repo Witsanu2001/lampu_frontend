@@ -3,18 +3,18 @@
 export interface MenuItem {
   label: string;
   to: string;
-  roles?: string[];      // สิทธิ์ที่เข้าได้ (ถ้าไม่มี/ไม่ใส่ แปลว่าเข้าได้ทุกคน)
-  submenu?: MenuItem[];  // เมนูย่อยยัดลงอาเรย์นี้
+  roles?: string[]; // สิทธิ์ที่เข้าได้ (ถ้าไม่มี/ไม่ใส่ แปลว่าเข้าได้ทุกคน)
+  submenu?: MenuItem[]; // เมนูย่อยยัดลงอาเรย์นี้
 }
 
 export const menuConfig: MenuItem[] = [
   {
-    label: "🏠 หน้าแรก",
-    to: "/",
+    label: "📄 ออเดอร์",
+    to: "/orders",
   },
   {
-    label: "👤 ออเดอร์",
-    to: "/orders",
+    label: "🏠 หน้าแรก",
+    to: "/",
   },
   {
     label: "📍 ที่อยู่จัดส่ง",
