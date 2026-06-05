@@ -110,7 +110,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
               <span className="text-lg font-semibold text-gray-800 dark:text-white">
                 รวมทั้งหมด
               </span>
-              <span className="text-2xl font-bold text-orange-500">
+              <span className="text-2xl font-bold text-emerald-500">
                 ฿{cartTotal.toLocaleString()}
               </span>
             </div>
@@ -126,7 +126,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                   onClose();
                   navigate("/payment");
                 }}
-                className="flex-1 py-3 px-4 text-white bg-orange-500 hover:bg-orange-600 rounded-lg font-semibold transition-colors"
+                className="flex-1 py-3 px-4 text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg font-semibold transition-colors"
               >
                 ชำระเงิน
               </button>

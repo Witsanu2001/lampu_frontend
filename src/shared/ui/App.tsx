@@ -145,15 +145,14 @@ export default function App() {
   };
 
   return (
-    /* 🌟 Root Container: บังคับเต็มจอ 100vh, ไม่ให้เลื่อน (overflow-hidden) และจัดเรียงแบบคอลัมน์ */
     <div className="h-screen w-full flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       
       {/* Header */}
       {user && <Header user={user} setUser={setUser} />}
       
-      {/* Navbar: ใส่ shrink-0 เพื่อไม่ให้เมนูโดนบีบเมื่อพื้นที่เนื้อหาด้านล่างเปลี่ยนขนาด */}
+      {/* 🌟 Navbar: เปลี่ยนจาก flex เฉยๆ เป็น hidden md:flex และเปลี่ยนเป็น flex-col */}
       {user && (
-        <nav className="shrink-0 px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex flex-col gap-4 shadow-sm z-10">
+        <nav className="hidden md:flex flex-col shrink-0 px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 gap-4 shadow-sm z-10">
           
           {/* ส่วนเมนูหลัก */}
           <div className="flex flex-wrap items-center gap-6">
@@ -188,7 +187,7 @@ export default function App() {
         </nav>
       )}
       
-      {/* 🌟 Main Content: ใช้ flex-1 เพื่อให้กินพื้นที่เต็มส่วนที่เหลือ และตั้ง overflow-hidden เพื่อห้าม Scroll */}
+      {/* Main Content */}
       <main className="flex-1 overflow-hidden relative">
         <AppRoutes user={user} setUser={setUser} />
       </main>

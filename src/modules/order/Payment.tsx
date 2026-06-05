@@ -3,9 +3,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useCart } from "../../shared/context/CartContext";
-import { useNavigate } from "react-router-dom"; // 🌟 Import useNavigate เพื่อใช้เปลี่ยนหน้า
+import { useNavigate } from "react-router-dom";
 
-// ข้อมูลจำลองสำหรับเมนูเพิ่มเติม (Add-ons)
 const addOnMenus = [
   {
     id: "addon-1",
@@ -49,17 +48,15 @@ export default function Payment() {
   const { cart, cartTotal, clearCart, updateQuantity, removeFromCart } =
     useCart();
   const [selectedAddOns, setSelectedAddOns] = useState<any[]>([]);
-
-  // 🌟 State สำหรับเก็บที่อยู่จัดส่ง
   const [shippingAddress, setShippingAddress] = useState<any>(null);
 
-  // โควต้าและการเลือกอุปกรณ์
+  // โควต้าปัจจุบันของชุดหมูกระทะ
   const mainItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
   const [stoveCount, setStoveCount] = useState(1);
   const [panCount, setPanCount] = useState(1);
   const [charcoalCount, setCharcoalCount] = useState(0);
 
-  // 🌟 ดึงข้อมูลที่อยู่ตอนเปิดหน้า
   useEffect(() => {
     const savedAddress = localStorage.getItem("primaryAddress");
     if (savedAddress) {
@@ -76,7 +73,29 @@ export default function Payment() {
     }
   }, [mainItemsCount, isInitialized]);
 
-  // State สำหรับการชำระเงิน
+  // 🌟 ฟังก์ชันจัดการปุ่ม + (ดึงเตา/กระทะที่เกินโควต้ามาเป็นโควต้าฟรี)
+  const handleIncreaseMainItem = (id: string, currentQty: number) => {
+    updateQuantity(id, currentQty + 1);
+
+    // ถ้าจำนวนเตา/กระทะ ที่มีอยู่ มากกว่าจำนวนชุด (แปลว่าจ่ายเงินเพิ่มอยู่)
+    // ให้คงจำนวนเตา/กระทะเท่าเดิม เพื่อให้มันถูกดูดเข้าไปเป็นโควต้าฟรีของชุดใหม่
+    // แต่ถ้าจำนวนเตา/กระทะ มีน้อยกว่าหรือเท่ากับโควต้า ให้เพิ่มอุปกรณ์ตามปกติ
+    setStoveCount((prev) => (prev > mainItemsCount ? prev : prev + 1));
+    setPanCount((prev) => (prev > mainItemsCount ? prev : prev + 1));
+  };
+
+  // 🌟 ฟังก์ชันจัดการปุ่ม -
+  const handleDecreaseMainItem = (id: string, currentQty: number) => {
+    if (currentQty > 1) {
+      updateQuantity(id, currentQty - 1);
+    } else {
+      removeFromCart(id);
+    }
+    // ลดจำนวนอุปกรณ์ลง 1 เสมอ แต่ไม่ให้ติดลบ
+    setStoveCount((prev) => Math.max(0, prev - 1));
+    setPanCount((prev) => Math.max(0, prev - 1));
+  };
+
   const [paymentMethod, setPaymentMethod] = useState("");
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
 
@@ -137,6 +156,8 @@ export default function Payment() {
     (sum, item) => sum + item.price * item.quantity,
     0,
   );
+
+  // คำนวณส่วนเกิน
   const extraStoves = Math.max(0, stoveCount - mainItemsCount);
   const extraPans = Math.max(0, panCount - mainItemsCount);
   const stoveFee = extraStoves * 30;
@@ -147,17 +168,14 @@ export default function Payment() {
     cartTotal + shippingFee + addOnTotal + charcoalFee + stoveFee + panFee;
 
   const handleConfirmPayment = () => {
-    // 🌟 เช็คว่ามีที่อยู่จัดส่งหรือยัง
     if (!shippingAddress) {
       alert("กรุณาเพิ่มที่อยู่จัดส่งก่อนยืนยันคำสั่งซื้อครับ/ค่ะ 📍");
       return;
     }
-
     if (paymentMethod === "promptpay" && !slipPreview) {
       alert("กรุณาอัปโหลดสลิปหลักฐานการโอนเงินก่อนยืนยันคำสั่งซื้อครับ/ค่ะ");
       return;
     }
-
     clearCart();
     setSelectedAddOns([]);
     setStoveCount(1);
@@ -171,9 +189,31 @@ export default function Payment() {
   return (
     <div className="h-full overflow-y-auto py-10 px-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">
-          การชำระเงิน
-        </h1>
+        {/* หัวหน้าเว็บ */}
+        <div className="flex items-center gap-4 mb-8">
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center justify-center w-10 h-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300"
+            aria-label="กลับไปหน้าหลัก"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-white m-0">
+            การชำระเงิน
+          </h1>
+        </div>
 
         {cart.length === 0 ? (
           <div className="text-center py-12">
@@ -183,7 +223,7 @@ export default function Payment() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* 🌟 1. ส่วนแสดงที่อยู่จัดส่ง */}
+            {/* 1. ที่อยู่จัดส่ง */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 border-l-4 border-blue-500">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
@@ -262,34 +302,33 @@ export default function Payment() {
                       </p>
                     </div>
                     <div className="text-right flex flex-col items-end gap-2">
-                      <p className="font-bold text-orange-500">
+                      <p className="font-bold text-emerald-500">
                         ฿{(item.price * item.quantity).toLocaleString()}
                       </p>
-                      {updateQuantity && removeFromCart && (
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() =>
-                              item.quantity > 1
-                                ? updateQuantity(item.id, item.quantity - 1)
-                                : removeFromCart(item.id)
-                            }
-                            className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
-                          >
-                            -
-                          </button>
-                          <span className="text-sm font-semibold w-5 text-center dark:text-white">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() =>
-                              updateQuantity(item.id, item.quantity + 1)
-                            }
-                            className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
-                          >
-                            +
-                          </button>
-                        </div>
-                      )}
+
+                      <div className="flex items-center justify-end gap-2">
+                        {/* 🌟 เรียกใช้ฟังก์ชัน ลด ที่แก้ไขใหม่ */}
+                        <button
+                          onClick={() =>
+                            handleDecreaseMainItem(item.id, item.quantity)
+                          }
+                          className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
+                        >
+                          -
+                        </button>
+                        <span className="text-sm font-semibold w-5 text-center dark:text-white">
+                          {item.quantity}
+                        </span>
+                        {/* 🌟 เรียกใช้ฟังก์ชัน เพิ่ม ที่แก้ไขใหม่ */}
+                        <button
+                          onClick={() =>
+                            handleIncreaseMainItem(item.id, item.quantity)
+                          }
+                          className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -319,27 +358,27 @@ export default function Payment() {
                       <h3 className="font-semibold text-sm text-gray-800 dark:text-white truncate mb-1">
                         {addon.name}
                       </h3>
-                      <p className="text-orange-500 font-bold text-sm mb-3">
+                      <p className="text-emerald-500 font-bold text-sm mb-3">
                         ฿{addon.price}
                       </p>
                       {selectedAddOn ? (
-                        <div className="flex items-center justify-between w-full mt-auto bg-orange-100 dark:bg-gray-600 rounded-lg p-1 px-2">
+                        <div className="flex items-center justify-between w-full mt-auto bg-emerald-100 dark:bg-gray-600 rounded-lg p-1 px-2">
                           <button
                             onClick={() =>
                               handleUpdateAddOnQuantity(addon.id, -1)
                             }
-                            className="w-6 h-6 flex items-center justify-center bg-white dark:bg-gray-500 rounded text-orange-600 dark:text-white font-bold shadow-sm hover:scale-105 transition-transform"
+                            className="w-6 h-6 flex items-center justify-center bg-white dark:bg-gray-500 rounded text-emerald-600 dark:text-white font-bold shadow-sm hover:scale-105 transition-transform"
                           >
                             -
                           </button>
-                          <span className="text-sm font-bold text-orange-600 dark:text-white">
+                          <span className="text-sm font-bold text-emerald-600 dark:text-white">
                             {selectedAddOn.quantity}
                           </span>
                           <button
                             onClick={() =>
                               handleUpdateAddOnQuantity(addon.id, 1)
                             }
-                            className="w-6 h-6 flex items-center justify-center bg-orange-500 rounded text-white font-bold shadow-sm hover:scale-105 transition-transform"
+                            className="w-6 h-6 flex items-center justify-center bg-emerald-500 rounded text-white font-bold shadow-sm hover:scale-105 transition-transform"
                           >
                             +
                           </button>
@@ -347,7 +386,7 @@ export default function Payment() {
                       ) : (
                         <button
                           onClick={() => handleAddAddOn(addon)}
-                          className="w-full mt-auto py-1.5 bg-orange-100 hover:bg-orange-200 dark:bg-orange-500/20 dark:hover:bg-orange-500/40 text-orange-600 dark:text-orange-400 font-medium text-xs rounded-lg transition-colors"
+                          className="w-full mt-auto py-1.5 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-medium text-xs rounded-lg transition-colors"
                         >
                           + เพิ่มรายการ
                         </button>
@@ -368,7 +407,7 @@ export default function Payment() {
                   {selectedAddOns.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center gap-4 p-4 bg-orange-50/50 dark:bg-gray-700/50 rounded-xl border border-orange-100 dark:border-gray-600"
+                      className="flex items-center gap-4 p-4 bg-emerald-50/50 dark:bg-gray-700/50 rounded-xl border border-emerald-100 dark:border-gray-600"
                     >
                       <img
                         src={item.image}
@@ -381,7 +420,7 @@ export default function Payment() {
                         </h3>
                       </div>
                       <div className="text-right flex flex-col items-end gap-2">
-                        <p className="font-bold text-orange-500">
+                        <p className="font-bold text-emerald-500">
                           ฿{(item.price * item.quantity).toLocaleString()}
                         </p>
                         <div className="flex items-center justify-end gap-2">
@@ -428,7 +467,7 @@ export default function Payment() {
                         ยืมฟรี (โควต้า {mainItemsCount} เตา)
                       </span>
                     ) : (
-                      <span className="block text-xs text-orange-500">
+                      <span className="block text-xs text-red-500">
                         + ฿30 / เตา (ส่วนเกิน)
                       </span>
                     )}
@@ -447,7 +486,7 @@ export default function Payment() {
                     </span>
                     <button
                       onClick={() => setStoveCount((prev) => prev + 1)}
-                      className="w-6 h-6 flex items-center justify-center bg-orange-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
+                      className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
                     >
                       +
                     </button>
@@ -464,7 +503,7 @@ export default function Payment() {
                         ยืมฟรี (โควต้า {mainItemsCount} ใบ)
                       </span>
                     ) : (
-                      <span className="block text-xs text-orange-500">
+                      <span className="block text-xs text-red-500">
                         + ฿20 / ใบ (ส่วนเกิน)
                       </span>
                     )}
@@ -483,7 +522,7 @@ export default function Payment() {
                     </span>
                     <button
                       onClick={() => setPanCount((prev) => prev + 1)}
-                      className="w-6 h-6 flex items-center justify-center bg-orange-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
+                      className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
                     >
                       +
                     </button>
@@ -495,7 +534,7 @@ export default function Payment() {
                     <span className="block text-gray-800 dark:text-white font-medium">
                       ถ่าน
                     </span>
-                    <span className="block text-xs text-orange-500">
+                    <span className="block text-xs text-red-500">
                       + ฿10 / ถุง
                     </span>
                   </div>
@@ -513,7 +552,7 @@ export default function Payment() {
                     </span>
                     <button
                       onClick={() => setCharcoalCount((prev) => prev + 1)}
-                      className="w-6 h-6 flex items-center justify-center bg-orange-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
+                      className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
                     >
                       +
                     </button>
@@ -584,7 +623,7 @@ export default function Payment() {
                 <span className="text-xl font-bold text-gray-800 dark:text-white">
                   ยอดรวมทั้งสิ้น
                 </span>
-                <span className="text-3xl font-bold text-orange-500">
+                <span className="text-3xl font-bold text-emerald-500">
                   ฿{grandTotal.toLocaleString()}
                 </span>
               </div>
@@ -597,14 +636,14 @@ export default function Payment() {
               </h2>
               <div className="space-y-4">
                 <label
-                  className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === "cod" ? "border-orange-500 bg-orange-50 dark:bg-orange-500/10" : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
+                  className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === "cod" ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
                 >
                   <input
                     type="radio"
                     name="payment"
                     checked={paymentMethod === "cod"}
                     onChange={() => setPaymentMethod("cod")}
-                    className="w-5 h-5 text-orange-500"
+                    className="w-5 h-5 text-emerald-500"
                   />
                   <span className="text-gray-800 dark:text-white font-medium">
                     ชำระเงินสดปลายทาง
@@ -612,14 +651,14 @@ export default function Payment() {
                 </label>
 
                 <label
-                  className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === "promptpay" ? "border-orange-500 bg-orange-50 dark:bg-orange-500/10" : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
+                  className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === "promptpay" ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
                 >
                   <input
                     type="radio"
                     name="payment"
                     checked={paymentMethod === "promptpay"}
                     onChange={() => setPaymentMethod("promptpay")}
-                    className="w-5 h-5 text-orange-500"
+                    className="w-5 h-5 text-emerald-500"
                   />
                   <span className="text-gray-800 dark:text-white font-medium">
                     โอนเงิน / สแกนคิวอาร์โค้ด (PromptPay)
@@ -630,7 +669,7 @@ export default function Payment() {
                   <div className="ml-8 mt-2 p-6 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center">
                     <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 text-center">
                       สแกน QR Code เพื่อชำระเงินจำนวน{" "}
-                      <strong className="text-orange-500 text-lg">
+                      <strong className="text-emerald-500 text-lg">
                         ฿{grandTotal.toLocaleString()}
                       </strong>
                     </p>
@@ -730,7 +769,7 @@ export default function Payment() {
             {/* ปุ่มยืนยัน */}
             <button
               onClick={handleConfirmPayment}
-              className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+              className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-lg rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
             >
               ยืนยันคำสั่งซื้อและการชำระเงิน (฿{grandTotal.toLocaleString()})
             </button>

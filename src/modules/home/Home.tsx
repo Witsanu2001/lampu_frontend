@@ -1,4 +1,6 @@
-// ข้อมูลจำลองสำหรับเมนูหมูกระทะ
+/* eslint-disable react-hooks/purity */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState } from "react";
 import { useCart } from "../../shared/context/CartContext";
 
 const mooKrataMenus = [
@@ -53,13 +55,70 @@ const mooKrataMenus = [
   },
 ];
 
+// 🌟 อัปเดต Type ให้เก็บเป้าหมายปลายทาง (targetX, targetY)
+interface FlyingItem {
+  id: number;
+  startX: number;
+  startY: number;
+  targetX: number;
+  targetY: number;
+  image: string;
+  active: boolean;
+}
+
 export default function Home() {
   const { addToCart } = useCart();
+  const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([]);
+
+  const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>, menu: any) => {
+    addToCart(menu);
+
+    const buttonRect = e.currentTarget.getBoundingClientRect();
+    const cartIcon = document.getElementById("cart-icon");
+    
+    // ตั้งค่าเริ่มต้นไว้เผื่อหาตะกร้าไม่เจอ
+    let targetX = window.innerWidth - 60;
+    let targetY = 20;
+
+    // 🌟 ถ้าหาปุ่มตะกร้าเจอ ให้คำนวณจุดกึ่งกลางของตะกร้า
+    if (cartIcon) {
+      const cartRect = cartIcon.getBoundingClientRect();
+      // ลบด้วย 32 เพื่อให้กึ่งกลางของรูป (ขนาด 64px) บินไปตรงกลางตะกร้าพอดี
+      targetX = cartRect.left + cartRect.width / 2 - 32;
+      targetY = cartRect.top + cartRect.height / 2 - 32;
+    }
+
+    const id = Date.now();
+    
+    setFlyingItems((prev) => [
+      ...prev,
+      { 
+        id, 
+        startX: buttonRect.left, 
+        startY: buttonRect.top, 
+        targetX, 
+        targetY, 
+        image: menu.image, 
+        active: false 
+      },
+    ]);
+
+    setTimeout(() => {
+      setFlyingItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, active: true } : item))
+      );
+    }, 50);
+
+    setTimeout(() => {
+      setFlyingItems((prev) => prev.filter((item) => item.id !== id));
+    }, 700);
+  };
+
   return (
     <div className="h-full overflow-y-auto py-10 px-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <div className="max-w-5xl mx-auto space-y-10">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6 text-center md:text-left border-l-4 border-orange-500 pl-3">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6 text-center md:text-left border-l-4 border-emerald-500 pl-3">
             เมนูหมูกระทะยอดฮิต 🥢
           </h2>
 
@@ -69,19 +128,17 @@ export default function Home() {
                 key={menu.id}
                 className="bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-gray-100 dark:border-gray-700 flex flex-col"
               >
-                {/* รูปภาพเมนู */}
                 <div className="h-48 overflow-hidden relative">
                   <img
                     src={menu.image}
                     alt={menu.name}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   />
-                  <div className="absolute top-3 right-3 bg-orange-500 text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
+                  <div className="absolute top-3 right-3 bg-emerald-500 text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
                     ฿{menu.price}
                   </div>
                 </div>
 
-                {/* รายละเอียดเมนู */}
                 <div className="p-5 flex flex-col flex-grow">
                   <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">
                     {menu.name}
@@ -90,25 +147,13 @@ export default function Home() {
                     {menu.description}
                   </p>
 
-                  {/* ปุ่มสั่งซื้อ */}
                   <button 
-                    onClick={() => addToCart(menu)}
-                    className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-sm transition-colors duration-200 flex items-center justify-center gap-2 mt-auto"
+                    onClick={(e) => handleAddToCart(e, menu)}
+                    className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-semibold rounded-lg shadow-sm transition-all duration-200 flex items-center justify-center gap-2 mt-auto"
                   >
                     <span>สั่งชุดนี้</span>
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </button>
                 </div>
@@ -117,6 +162,22 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* 🌟 แสดงรูปภาพที่กำลังลอยเข้าตะกร้า โดยใช้ targetX และ targetY */}
+      {flyingItems.map((item) => (
+        <img
+          key={item.id}
+          src={item.image}
+          alt="flying-item"
+          className="fixed z-[9999] w-16 h-16 rounded-full object-cover shadow-xl pointer-events-none transition-all duration-700 ease-in-out"
+          style={{
+            top: item.active ? `${item.targetY}px` : `${item.startY}px`,
+            left: item.active ? `${item.targetX}px` : `${item.startX}px`,
+            transform: item.active ? "scale(0.1) rotate(360deg)" : "scale(1) rotate(0deg)",
+            opacity: item.active ? 0 : 1,
+          }}
+        />
+      ))}
     </div>
   );
 }
