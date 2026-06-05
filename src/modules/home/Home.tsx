@@ -1,7 +1,9 @@
 // ข้อมูลจำลองสำหรับเมนูหมูกระทะ
+import { useCart } from "../../shared/context/CartContext";
+
 const mooKrataMenus = [
   {
-    id: 1,
+    id: "1",
     name: "ชุดหมูจุใจ (S)",
     price: 299,
     description: "หมูสามชั้น, สันคอ, หมูหมักนุ่ม พร้อมชุดผักรวมและวุ้นเส้น",
@@ -9,7 +11,7 @@ const mooKrataMenus = [
       "https://assets.epicurious.com/photos/5c93ede3e6249a2fe87f23c2/16:9/w_5904,h_3321,c_limit/Grilled-Marinated-Leg-of-Lamb-118032019.jpg",
   },
   {
-    id: 2,
+    id: "2",
     name: "ชุดเนื้อพรีเมียม (M)",
     price: 499,
     description:
@@ -18,7 +20,7 @@ const mooKrataMenus = [
       "https://images.unsplash.com/photo-1603360946369-dc9bb6258143?auto=format&fit=crop&q=80&w=400&h=300",
   },
   {
-    id: 3,
+    id: "3",
     name: "ชุดครอบครัวหรรษา (L)",
     price: 699,
     description: "รวมหมู เนื้อ ทะเล (กุ้ง, ปลาหมึก) พร้อมชุดผักรวมใหญ่จุใจ",
@@ -26,7 +28,7 @@ const mooKrataMenus = [
       "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=400&h=300",
   },
   {
-    id: 4,
+    id: "4",
     name: "ชุดครอบครัวหรรษา (XL)",
     price: 799,
     description: "รวมหมู เนื้อ ทะเล (กุ้ง, ปลาหมึก) พร้อมชุดผักรวมใหญ่จุใจ",
@@ -34,7 +36,7 @@ const mooKrataMenus = [
       "https://www.seriouseats.com/thmb/DohQC_iADRKgJPdXvcxSjsPA930=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/__opt__aboutcom__coeus__resources__content_migration__serious_eats__seriouseats.com__recipes__images__2016__06__20110516-cowboy-steak-kenji-lopez-alt-bb4a825bd05b4e91b7672bc1603043a8.jpg",
   },
   {
-    id: 5,
+    id: "5",
     name: "ชุดครอบครัวหรรษา (2XL)",
     price: 999,
     description: "รวมหมู เนื้อ ทะเล (กุ้ง, ปลาหมึก) พร้อมชุดผักรวมใหญ่จุใจ",
@@ -42,7 +44,7 @@ const mooKrataMenus = [
       "https://nebraskastarbeef.com/wp-content/uploads/2022/09/52913995_m-scaled.jpg",
   },
   {
-    id: 6,
+    id: "6",
     name: "ชุดครอบครัวหรรษา (3XL)",
     price: 1299,
     description: "รวมหมู เนื้อ ทะเล (กุ้ง, ปลาหมึก) พร้อมชุดผักรวมใหญ่จุใจ",
@@ -52,6 +54,7 @@ const mooKrataMenus = [
 ];
 
 export default function Home() {
+  const { addToCart } = useCart();
   return (
     <div className="h-full overflow-y-auto py-10 px-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <div className="max-w-5xl mx-auto space-y-10">
@@ -88,7 +91,10 @@ export default function Home() {
                   </p>
 
                   {/* ปุ่มสั่งซื้อ */}
-                  <button className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-sm transition-colors duration-200 flex items-center justify-center gap-2 mt-auto">
+                  <button 
+                    onClick={() => addToCart(menu)}
+                    className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-sm transition-colors duration-200 flex items-center justify-center gap-2 mt-auto"
+                  >
                     <span>สั่งชุดนี้</span>
                     <svg
                       className="w-5 h-5"
