@@ -17,6 +17,10 @@ export const menuConfig: MenuItem[] = [
     to: "/orders",
   },
   {
+    label: "📍 ที่อยู่จัดส่ง",
+    to: "/address",
+  },
+  {
     label: "⚙️ จัดการระบบ (Admin)",
     to: "/admin-dashboard",
     roles: ["admin"], // เห็นและเข้าได้เฉพาะคนที่มี role เป็น admin เท่านั้น
