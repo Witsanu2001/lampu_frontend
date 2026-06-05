@@ -237,62 +237,8 @@ export default function Payment() {
               )}
             </div>
 
-            {/* 2. สรุปเมนูเพิ่มเติม (ถ้ามี) */}
-            {selectedAddOns.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 border-l-4 border-orange-500">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
-                  สรุปรายการสั่งซื้อ (เมนูเพิ่มเติม)
-                </h2>
-                <div className="space-y-4">
-                  {selectedAddOns.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center gap-4 p-4 bg-orange-50/50 dark:bg-gray-700/50 rounded-xl border border-orange-100 dark:border-gray-600"
-                    >
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-800 dark:text-white">
-                          {item.name}
-                        </h3>
-                      </div>
-                      <div className="text-right flex flex-col items-end gap-2">
-                        <p className="font-bold text-orange-500">
-                          ฿{(item.price * item.quantity).toLocaleString()}
-                        </p>
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() =>
-                              handleUpdateAddOnQuantity(item.id, -1)
-                            }
-                            className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
-                          >
-                            -
-                          </button>
-                          <span className="text-sm font-semibold w-4 text-center dark:text-white">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() =>
-                              handleUpdateAddOnQuantity(item.id, 1)
-                            }
-                            className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 3. สรุปชุดหลัก */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
+            {/* 2. สรุปชุดหลัก */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 border-l-4 border-emerald-500">
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
                 สรุปรายการสั่งซื้อ (ชุดหลัก)
               </h2>
@@ -350,7 +296,7 @@ export default function Payment() {
               </div>
             </div>
 
-            {/* 4. การ์ดเลือกเมนูเพิ่มเติม */}
+            {/* 3. การ์ดเลือกเมนูเพิ่มเติม */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
                 รับเพิ่มไหมครับ/คะ? 😋
@@ -411,6 +357,60 @@ export default function Payment() {
                 })}
               </div>
             </div>
+
+            {/* 4. สรุปเมนูเพิ่มเติม (ถ้ามี) */}
+            {selectedAddOns.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 border-l-4 border-orange-500">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
+                  สรุปรายการสั่งซื้อ (เมนูเพิ่มเติม)
+                </h2>
+                <div className="space-y-4">
+                  {selectedAddOns.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-4 p-4 bg-orange-50/50 dark:bg-gray-700/50 rounded-xl border border-orange-100 dark:border-gray-600"
+                    >
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-16 h-16 object-cover rounded-lg"
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-800 dark:text-white">
+                          {item.name}
+                        </h3>
+                      </div>
+                      <div className="text-right flex flex-col items-end gap-2">
+                        <p className="font-bold text-orange-500">
+                          ฿{(item.price * item.quantity).toLocaleString()}
+                        </p>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() =>
+                              handleUpdateAddOnQuantity(item.id, -1)
+                            }
+                            className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
+                          >
+                            -
+                          </button>
+                          <span className="text-sm font-semibold w-4 text-center dark:text-white">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() =>
+                              handleUpdateAddOnQuantity(item.id, 1)
+                            }
+                            className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* 5. อุปกรณ์สำหรับปิ้งย่าง */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
@@ -610,7 +610,7 @@ export default function Payment() {
                     ชำระเงินสดปลายทาง
                   </span>
                 </label>
-                
+
                 <label
                   className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === "promptpay" ? "border-orange-500 bg-orange-50 dark:bg-orange-500/10" : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
                 >
