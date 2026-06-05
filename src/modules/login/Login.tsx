@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
-import { auth, facebookProvider } from "../const/firebase"; 
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, FacebookAuthProvider, updateProfile } from "firebase/auth"; // 🌟 เปลี่ยนมาอิมพอร์ต signInWithPopup
+import { auth, facebookProvider } from "../const/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, FacebookAuthProvider, updateProfile } from "firebase/auth";
 import liff from "@line/liff";
 
 interface LoginProps {
-  setUser: (user: any) => void; // 🌟 รับ type setUser เข้ามา
+  setUser: (user: any) => void;
 }
 
 export default function Login({ setUser }: LoginProps) {
@@ -18,11 +18,47 @@ export default function Login({ setUser }: LoginProps) {
     e.preventDefault();
     setError("");
     try {
+      let userCredential;
       if (isLoginView) {
-        await signInWithEmailAndPassword(auth, email, password);
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
       }
+
+      // 🌟 1. ดึงข้อมูลและ Token ของผู้ใช้ที่เพิ่งล็อกอิน/สมัครสำเร็จ
+      const user = userCredential.user;
+      const idToken = await user.getIdToken(true);
+
+      const updatedUser = {
+        uid: user.uid,
+        email: user.email || "",
+        displayName: user.displayName || email.split("@")[0],
+        photoURL: user.photoURL || "",
+        provider: "email",
+      };
+
+      // 🌟 2. เซฟลง State ของ React
+      setUser(updatedUser);
+      localStorage.setItem("userData", JSON.stringify(updatedUser));
+
+      // 🌟 3. ยิงข้อมูลไปหา API Gateway เพื่อบันทึกลง Firestore
+      try {
+        const syncResponse = await fetch("https://api-gateway-879165280409.asia-southeast1.run.app/api/users/sync", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${idToken}`
+          },
+          body: JSON.stringify(updatedUser)
+        });
+
+        if (syncResponse.ok) {
+          console.log("✅ บันทึกผู้ใช้อีเมลลงฐานข้อมูลสำเร็จ!");
+        }
+      } catch (apiErr) {
+        console.error("❌ เกิดข้อผิดพลาดในการเชื่อมต่อ Backend:", apiErr);
+      }
+
       setEmail("");
       setPassword("");
     } catch (err: any) {
@@ -34,47 +70,46 @@ export default function Login({ setUser }: LoginProps) {
     setError("");
     try {
       facebookProvider.addScope("public_profile");
-      
+
       // 🌟 1. ล็อกอินด้วย Popup
       const result = await signInWithPopup(auth, facebookProvider);
-      
+
       // 🌟 2. ดึงข้อมูลพิกัดรูปภาพระดับ HD
       const credential = FacebookAuthProvider.credentialFromResult(result);
       const token = credential?.accessToken;
-      
+
       if (token) {
         const response = await fetch(`https://graph.facebook.com/me?fields=picture.width(500).height(500)&access_token=${token}`);
         const data = await response.json();
-        
+
         if (data?.picture?.data) {
           const realPicUrl = data.picture.data.url;
           await updateProfile(result.user, { photoURL: realPicUrl });
-          
+
           // จัดรูปแบบข้อมูลสำหรับเซฟลง State และส่งไปให้ Backend
           const updatedUser = {
             uid: result.user.uid,
-            email: result.user.email || "", // บางครั้ง Facebook ไม่ส่ง Email มาให้
+            email: result.user.email || "",
             displayName: result.user.displayName || "ผู้ใช้ใหม่",
             photoURL: realPicUrl || "",
             provider: "facebook",
           };
-          
+
           // บันทึกลง State ของ React และ LocalStorage
           setUser(updatedUser);
           localStorage.setItem("userData", JSON.stringify(updatedUser));
 
-          // 🌟 3. ยิงข้อมูลไปหา API Gateway (เพื่อส่งต่อไปเซฟใน Firestore)
+          // 🌟 3. ยิงข้อมูลไปหา API Gateway
           try {
-            // ขอ Token จาก Firebase (เอาไว้ให้ Gateway ตรวจสอบความปลอดภัย)
-            const idToken = await result.user.getIdToken(true); 
-            
+            const idToken = await result.user.getIdToken(true);
+
             const syncResponse = await fetch("https://api-gateway-879165280409.asia-southeast1.run.app/api/users/sync", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${idToken}` // ส่งไปใน Header
+                "Authorization": `Bearer ${idToken}`
               },
-              body: JSON.stringify(updatedUser) // ส่งข้อมูลโปรไฟล์ไปด้วย
+              body: JSON.stringify(updatedUser)
             });
 
             if (syncResponse.ok) {
@@ -86,7 +121,6 @@ export default function Login({ setUser }: LoginProps) {
           } catch (apiErr) {
             console.error("❌ เกิดข้อผิดพลาดในการเรียก API Gateway:", apiErr);
           }
-
         }
       }
     } catch (err: any) {
@@ -101,37 +135,89 @@ export default function Login({ setUser }: LoginProps) {
   };
 
   return (
-    <div id="center" style={{ minHeight: "100vh", padding: "20px" }}>
-      <div style={{ background: "var(--bg)", padding: "40px", borderRadius: "12px", boxShadow: "var(--shadow)", border: "1px solid var(--border)", width: "100%", maxWidth: "400px" }}>
-        <h2 style={{ textAlign: "center", marginBottom: "24px" }}>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+      <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
+        
+        {/* หัวข้อ */}
+        <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-6">
           {isLoginView ? "เข้าสู่ระบบ" : "สมัครสมาชิก"}
         </h2>
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <input type="email" placeholder="อีเมล" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ padding: "12px", borderRadius: "6px", border: "1px solid var(--border)", background: "var(--code-bg)", color: "var(--text-h)" }} />
-          <input type="password" placeholder="รหัสผ่าน" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ padding: "12px", borderRadius: "6px", border: "1px solid var(--border)", background: "var(--code-bg)", color: "var(--text-h)" }} />
-          {error && <div style={{ color: "#ef4444", fontSize: "14px", textAlign: "center" }}>{error}</div>}
-          <button type="submit" style={{ padding: "12px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", marginTop: "8px" }}>
+
+        {/* ฟอร์มล็อกอิน / สมัครสมาชิก */}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <input
+            type="email"
+            placeholder="อีเมล"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+          />
+          <input
+            type="password"
+            placeholder="รหัสผ่าน"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+          />
+          
+          {error && (
+            <div className="text-red-500 text-sm text-center font-medium bg-red-50 dark:bg-red-900/30 p-2 rounded-lg">
+              {error}
+            </div>
+          )}
+          
+          <button
+            type="submit"
+            className="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+          >
             {isLoginView ? "เข้าสู่ระบบ" : "สมัครสมาชิก"}
           </button>
         </form>
 
-        <div style={{ display: "flex", alignItems: "center", margin: "20px 0" }}>
-          <div style={{ flex: 1, height: "1px", backgroundColor: "var(--border)" }}></div>
-          <span style={{ margin: "0 10px", color: "var(--text)", fontSize: "14px" }}>หรือ</span>
-          <div style={{ flex: 1, height: "1px", backgroundColor: "var(--border)" }}></div>
+        {/* เส้นแบ่ง "หรือ" */}
+        <div className="flex items-center my-6">
+          <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
+          <span className="mx-4 text-sm text-gray-500 dark:text-gray-400 font-medium">หรือ</span>
+          <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
         </div>
 
-        <button onClick={handleLineLogin} type="button" style={{ width: "100%", padding: "12px", background: "#06C755", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-          ดำเนินการต่อด้วย LINE
-        </button>
-        <button onClick={handleFacebookLogin} type="button" style={{ width: "100%", padding: "12px", background: "#1877F2", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px" }}>
-          ดำเนินการต่อด้วย Facebook
-        </button>
-        <div style={{ textAlign: "center", marginTop: "20px" }}>
-          <button type="button" onClick={() => { setIsLoginView(!isLoginView); setError(""); }} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", textDecoration: "underline" }}>
+        {/* ปุ่ม Social Login */}
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={handleLineLogin}
+            type="button"
+            className="w-full py-3 bg-[#00B900] hover:bg-[#009900] text-white font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex justify-center items-center gap-2"
+          >
+            {/* สามารถใส่ไอคอน LINE ตรงนี้ได้ */}
+            ดำเนินการต่อด้วย LINE
+          </button>
+          
+          <button
+            onClick={handleFacebookLogin}
+            type="button"
+            className="w-full py-3 bg-[#1877F2] hover:bg-[#166FE5] text-white font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex justify-center items-center gap-2"
+          >
+            {/* สามารถใส่ไอคอน Facebook ตรงนี้ได้ */}
+            ดำเนินการต่อด้วย Facebook
+          </button>
+        </div>
+
+        {/* สลับหน้าล็อกอิน/สมัครสมาชิก */}
+        <div className="text-center mt-6">
+          <button
+            type="button"
+            onClick={() => {
+              setIsLoginView(!isLoginView);
+              setError("");
+            }}
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium hover:underline transition-colors duration-200"
+          >
             {isLoginView ? "ยังไม่มีบัญชีใช่ไหม? สมัครเลย" : "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ"}
           </button>
         </div>
+
       </div>
     </div>
   );

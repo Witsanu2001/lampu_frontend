@@ -13,8 +13,8 @@ export const menuConfig: MenuItem[] = [
     to: "/",
   },
   {
-    label: "👤 โปรไฟล์",
-    to: "/profile",
+    label: "👤 ออเดอร์",
+    to: "/orders",
   },
   {
     label: "⚙️ จัดการระบบ (Admin)",
