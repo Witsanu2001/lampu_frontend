@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/shared/ui/App.tsx
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom"; 
+import { Link, useLocation } from "react-router-dom"; 
 import { auth } from "../../modules/const/firebase"; 
 import { getRedirectResult, FacebookAuthProvider, updateProfile, signInWithCustomToken } from "firebase/auth";
 import liff from "@line/liff";
@@ -19,6 +19,9 @@ export default function App() {
     const savedUser = localStorage.getItem("userData");
     return savedUser ? JSON.parse(savedUser) : null;
   });
+
+  const location = useLocation();
+  const isPaymentPage = location.pathname === "/payment"; // หรือ "/payment" ตามที่คุณใช้จริง
 
   // 1. ตรวจสอบการโหลดและการเข้าสู่ระบบของ LINE LIFF
   useEffect(() => {
@@ -148,11 +151,11 @@ export default function App() {
     <div className="h-screen w-full flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       
       {/* Header */}
-      {user && <Header user={user} setUser={setUser} />}
+      {user && !isPaymentPage && <Header user={user} setUser={setUser} />}
       
       {/* 🌟 Navbar: เปลี่ยนจาก flex เฉยๆ เป็น hidden md:flex และเปลี่ยนเป็น flex-col */}
-      {user && (
-        <nav className="hidden md:flex flex-col shrink-0 px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 gap-4 shadow-sm z-10">
+      {user && !isPaymentPage && (
+        <nav className="flex flex-col shrink-0 px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 gap-4 shadow-sm z-10">
           
           {/* ส่วนเมนูหลัก */}
           <div className="flex flex-wrap items-center gap-6">

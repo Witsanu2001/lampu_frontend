@@ -57,7 +57,7 @@ export default function Header({ user, setUser }: HeaderProps) {
 
   return (
     <>
-      <header className="hidden md:flex w-full px-6 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 justify-between items-center transition-colors duration-200 z-20">
+      <header className="flex w-full px-6 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 justify-between items-center transition-colors duration-200 z-20">
         <div className="flex items-center gap-2">
           <strong className="text-lg text-gray-800 dark:text-gray-100 tracking-wide">
             Lampu Moo Krata
