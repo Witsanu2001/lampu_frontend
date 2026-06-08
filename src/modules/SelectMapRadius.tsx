@@ -1,0 +1,180 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect } from 'react';
+import Map, { Source, Layer } from 'react-map-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+
+// 📍 1. ตั้งค่าคงที่ของร้าน (พิกัดร้านถ้ำพรรณรา)
+const SHOP_LAT = 8.301677;
+const SHOP_LNG = 99.365736;
+const FREE_RADIUS_KM = 1.8;
+
+// 🧮 2. ฟังก์ชันคณิตศาสตร์คำนวณระยะทางเส้นตรงจากพิกัด (Haversine Formula)
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371; // รัศมีของโลก (กิโลเมตร)
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // ได้ผลลัพธ์เป็นระยะทางกิโลเมตร
+};
+
+// 🌐 3. ฟังก์ชันสร้างรูปวงกลม GeoJSON เพื่อไปวาดบน Mapbox
+const generateCircleGeoJSON = (centerLng: number, centerLat: number, radiusInKm: number) => {
+  const points = 64; 
+  const coords = [];
+  const distanceX = radiusInKm / (111.32 * Math.cos(centerLat * Math.PI / 180));
+  const distanceY = radiusInKm / 110.574;
+
+  for (let i = 0; i < points; i++) {
+    const theta = (i / points) * (2 * Math.PI);
+    const x = distanceX * Math.cos(theta);
+    const y = distanceY * Math.sin(theta);
+    coords.push([centerLng + x, centerLat + y]);
+  }
+  coords.push(coords[0]); 
+
+  return {
+    type: 'Feature' as const, // 🎯 เติม as const ตรงนี้
+    properties: {},
+    geometry: {
+      type: 'Polygon' as const, // 🎯 และเติม as const ตรงนี้ด้วยครับ
+      coordinates: [coords]
+    }
+  };
+};
+
+const SelectMapRadius = () => {
+  const [viewState, setViewState] = useState({
+    longitude: SHOP_LNG,
+    latitude: SHOP_LAT,
+    zoom: 14
+  });
+
+  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
+
+  // ดึงตำแหน่ง GPS ของลูกค้าตอนเปิดหน้าเว็บครั้งแรก
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setViewState({
+            longitude: position.coords.longitude,
+            latitude: position.coords.latitude,
+            zoom: 15
+          });
+          setIsLoadingLocation(false);
+        },
+        () => {
+          setIsLoadingLocation(false); // ถ้าปิด GPS ก็ใช้ค่าเริ่มต้นหน้าร้าน
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    } else {
+      setIsLoadingLocation(false);
+    }
+  }, []);
+
+  // 🎯คำนวณระยะทาง ณ จุดที่ลูกค้าเลื่อนผังเมืองมาอยู่ตรงกลางหน้าจอแบบเรียลไทม์!
+  const distanceFromShop = calculateDistance(
+    SHOP_LAT,
+    SHOP_LNG,
+    viewState.latitude,
+    viewState.longitude
+  );
+
+  // 💰 เช็กเงื่อนไขราคาส่วนต่างค่าส่ง
+  const isOverRadius = distanceFromShop > FREE_RADIUS_KM;
+  const deliveryFee = isOverRadius ? 10 : 0;
+
+  // วาดวงกลมรัศมีส่งฟรีรอบๆ ร้าน
+  const circleData = generateCircleGeoJSON(SHOP_LNG, SHOP_LAT, FREE_RADIUS_KM);
+
+  const layerStyle: any = {
+    id: 'circle-layer',
+    type: 'fill',
+    paint: {
+      'fill-color': '#ff7a00',
+      'fill-opacity': 0.15, // ความโปร่งแสงให้มองเห็นถนนเบื้องหลัง
+      'fill-outline-color': '#ff5100'
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-screen overflow-hidden text-slate-800">
+      <div className="p-4 bg-orange-500 text-white text-center font-bold text-xl z-20 shadow-md">
+        Lampu Moo Krata Delivery 🥓
+      </div>
+
+      <div className="flex-1 relative w-full h-full">
+        <Map
+          {...viewState}
+          onMove={evt => setViewState(evt.viewState)}
+          mapStyle="mapbox://styles/janos2001/cmq4te5bc007c01s3f63xa5ll" // เปลี่ยนเป็นลิงก์ที่คุณปรับแต่งใน Mapbox Studio ได้เลย
+          mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
+          style={{ width: '100%', height: '100%' }}
+        >
+          {/* วาดวงกลมรัศมีส่งฟรีแสดงบนแผนที่ */}
+          <Source id="shop-radius" type="geojson" data={circleData}>
+            <Layer {...layerStyle} />
+          </Source>
+        </Map>
+
+        {/* หมุดปักกึ่งกลางหน้าจอ */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full pointer-events-none z-10 text-4xl filter drop-shadow-md">
+          📍
+        </div>
+
+        {/* วงกลมบอกตำแหน่งร้านหมูกระทะให้ลูกค้ารู้ว่าร้านอยู่ตรงไหน */}
+        <div className="absolute top-4 right-4 bg-white px-3 py-2 rounded-lg shadow-md font-semibold text-xs z-10 border border-orange-100 flex items-center gap-1">
+          <span className="text-sm">🏠</span> ที่ตั้งร้าน ลำพูหมูกระทะ
+        </div>
+
+        {isLoadingLocation && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-30">
+            <div className="bg-white px-6 py-4 rounded-xl shadow-lg font-bold flex items-center gap-3">
+              <span className="animate-spin text-orange-500">⏳</span> กำลังค้นหาตำแหน่งของคุณ...
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 📊 ส่วนแสดงผลวิเคราะห์ราคาและกิโลเมตรด้านล่าง */}
+      <div className="p-5 bg-white shadow-xl z-20 relative border-t border-slate-100 rounded-t-2xl">
+        <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+          <div>
+            <p className="text-xs text-slate-400 font-medium">ระยะทางจากร้าน</p>
+            <p className="text-lg font-bold text-slate-700">
+              {distanceFromShop.toFixed(2)} <span className="text-sm font-normal">กม.</span>
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-slate-400 font-medium">ค่าบริการจัดส่ง</p>
+            <p className={`text-xl font-extrabold ${deliveryFee === 0 ? 'text-green-600' : 'text-orange-600'}`}>
+              {deliveryFee === 0 ? 'ส่งฟรี 🎉' : `${deliveryFee} บาท`}
+            </p>
+          </div>
+        </div>
+
+        <button 
+          className="w-full bg-orange-600 text-white py-3.5 rounded-xl font-bold text-lg hover:bg-orange-700 transition-colors shadow-md active:scale-[0.98] transform"
+          onClick={() => {
+            alert(
+              `บันทึกออเดอร์สำเร็จ!\n` +
+              `• พิกัด: ${viewState.latitude.toFixed(6)}, ${viewState.longitude.toFixed(6)}\n` +
+              `• ระยะทาง: ${distanceFromShop.toFixed(2)} กม.\n` +
+              `• ค่าส่ง: ${deliveryFee} บาท`
+            );
+          }}
+        >
+          ยืนยันตำแหน่งนี้ (ค่าส่ง {deliveryFee === 0 ? '0' : deliveryFee}.-)
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default SelectMapRadius;

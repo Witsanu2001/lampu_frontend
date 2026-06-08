@@ -57,10 +57,17 @@ export default function Payment() {
   const [panCount, setPanCount] = useState(1);
   const [charcoalCount, setCharcoalCount] = useState(0);
 
+  // 🌟 แก้ไขการดึงข้อมูลจาก LocalStorage ให้ตรงกับ userAddresses
   useEffect(() => {
-    const savedAddress = localStorage.getItem("primaryAddress");
+    const savedAddress = localStorage.getItem("userAddresses");
     if (savedAddress) {
-      setShippingAddress(JSON.parse(savedAddress));
+      const parsedAddress = JSON.parse(savedAddress);
+      // เช็คว่าถ้าเป็น Array ให้ดึงที่อยู่แรกมาใช้ (คุณสามารถแก้ logic ดึงอันที่ Default ได้ที่นี่)
+      if (Array.isArray(parsedAddress) && parsedAddress.length > 0) {
+        setShippingAddress(parsedAddress[0]);
+      } else {
+        setShippingAddress(parsedAddress);
+      }
     }
   }, []);
 
@@ -73,25 +80,18 @@ export default function Payment() {
     }
   }, [mainItemsCount, isInitialized]);
 
-  // 🌟 ฟังก์ชันจัดการปุ่ม + (ดึงเตา/กระทะที่เกินโควต้ามาเป็นโควต้าฟรี)
   const handleIncreaseMainItem = (id: string, currentQty: number) => {
     updateQuantity(id, currentQty + 1);
-
-    // ถ้าจำนวนเตา/กระทะ ที่มีอยู่ มากกว่าจำนวนชุด (แปลว่าจ่ายเงินเพิ่มอยู่)
-    // ให้คงจำนวนเตา/กระทะเท่าเดิม เพื่อให้มันถูกดูดเข้าไปเป็นโควต้าฟรีของชุดใหม่
-    // แต่ถ้าจำนวนเตา/กระทะ มีน้อยกว่าหรือเท่ากับโควต้า ให้เพิ่มอุปกรณ์ตามปกติ
     setStoveCount((prev) => (prev > mainItemsCount ? prev : prev + 1));
     setPanCount((prev) => (prev > mainItemsCount ? prev : prev + 1));
   };
 
-  // 🌟 ฟังก์ชันจัดการปุ่ม -
   const handleDecreaseMainItem = (id: string, currentQty: number) => {
     if (currentQty > 1) {
       updateQuantity(id, currentQty - 1);
     } else {
       removeFromCart(id);
     }
-    // ลดจำนวนอุปกรณ์ลง 1 เสมอ แต่ไม่ให้ติดลบ
     setStoveCount((prev) => Math.max(0, prev - 1));
     setPanCount((prev) => Math.max(0, prev - 1));
   };
@@ -151,7 +151,10 @@ export default function Payment() {
     });
   };
 
-  const shippingFee = mainItemsCount * 10;
+  // 🌟 ดึงค่าจากตัวแปร deliveryFee (เพิ่ม fallback เป็น fee เผื่อไว้ด้วย)
+  const deliveryFeePerSet = shippingAddress?.deliveryFee || shippingAddress?.fee || 0;
+  const shippingFee = mainItemsCount * deliveryFeePerSet;
+
   const addOnTotal = selectedAddOns.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0,
@@ -240,7 +243,7 @@ export default function Payment() {
               {shippingAddress ? (
                 <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-700">
                   <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-                    {shippingAddress.details}
+                    {shippingAddress.details || shippingAddress.address}
                   </p>
                   {shippingAddress.location && (
                     <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-3 flex items-center gap-1">
@@ -307,7 +310,6 @@ export default function Payment() {
                       </p>
 
                       <div className="flex items-center justify-end gap-2">
-                        {/* 🌟 เรียกใช้ฟังก์ชัน ลด ที่แก้ไขใหม่ */}
                         <button
                           onClick={() =>
                             handleDecreaseMainItem(item.id, item.quantity)
@@ -319,7 +321,6 @@ export default function Payment() {
                         <span className="text-sm font-semibold w-5 text-center dark:text-white">
                           {item.quantity}
                         </span>
-                        {/* 🌟 เรียกใช้ฟังก์ชัน เพิ่ม ที่แก้ไขใหม่ */}
                         <button
                           onClick={() =>
                             handleIncreaseMainItem(item.id, item.quantity)
@@ -583,7 +584,7 @@ export default function Payment() {
               )}
               <div className="flex justify-between items-center">
                 <span className="text-lg font-medium text-gray-600 dark:text-gray-300">
-                  ค่าส่ง ({mainItemsCount} ชุด)
+                  ค่าส่ง ({mainItemsCount} ชุด x ฿{deliveryFeePerSet})
                 </span>
                 <span className="text-lg font-semibold text-gray-800 dark:text-white">
                   ฿{shippingFee.toLocaleString()}

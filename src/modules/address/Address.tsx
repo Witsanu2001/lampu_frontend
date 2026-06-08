@@ -1,35 +1,42 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect } from "react";
-import SelectLocation from "../SelectLocation";
+import SelectMaps from "../SelectMaps"; // เปลี่ยน path ให้ตรงกับโฟลเดอร์ของคุณถ้าจำเป็น
 
-// 🌟 1. อัปเดตโครงสร้างข้อมูลให้มี ชื่อ, เบอร์โทร, และจุดสังเกต
+// 🌟 1. เพิ่มค่า ค่าส่ง, ระยะทาง, และสถานะนัดรับ ลงใน Interface
 interface AddressItem {
   id: string;
-  name: string;        // ชื่อคนรับ
-  phone: string;       // เบอร์โทร
-  details: string;     // รายละเอียดที่อยู่
-  note: string;        // จุดสังเกต
+  name: string;
+  phone: string;
+  details: string;
+  note: string;
   location: { lat: number; lng: number } | null;
+  deliveryFee: number; // เก็บค่าส่ง
+  distance: number;    // เก็ประยะทาง
+  isMeetup: boolean;   // เก็บสถานะนัดรับ
   isDefault: boolean;
 }
 
 export default function Address() {
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
   
-  // State สำหรับจัดการฟอร์ม
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // 🌟 2. เพิ่ม State สำหรับฟิลด์ใหม่
   const [recipientName, setRecipientName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [addressDetails, setAddressDetails] = useState("");
   const [deliveryNote, setDeliveryNote] = useState("");
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   
+  // 🌟 2. สร้าง State มารับค่าชั่วคราวตอนปักหมุดเสร็จ
+  const [deliveryFee, setDeliveryFee] = useState<number>(0);
+  const [distance, setDistance] = useState<number>(0);
+  const [isMeetup, setIsMeetup] = useState<boolean>(false);
+
   const [isDefault, setIsDefault] = useState(false);
   const [showMap, setShowMap] = useState(false);
 
+  // โหลดข้อมูลจาก localStorage ตอนเปิดเว็บ
   useEffect(() => {
     const savedAddresses = localStorage.getItem("userAddresses");
     if (savedAddresses) {
@@ -37,6 +44,7 @@ export default function Address() {
     }
   }, []);
 
+  // ฟังก์ชันบันทึกข้อมูลหลัก (Primary Address)
   const syncPrimaryAddress = (updatedAddresses: AddressItem[]) => {
     const defaultAddr = updatedAddresses.find((a) => a.isDefault);
     if (defaultAddr) {
@@ -50,7 +58,6 @@ export default function Address() {
     localStorage.setItem("userAddresses", JSON.stringify(updatedAddresses));
   };
 
-  // 🌟 3. อัปเดตฟังก์ชันตอนเปิดฟอร์มให้โหลดข้อมูลใหม่ด้วย
   const handleOpenForm = (addressToEdit?: AddressItem) => {
     if (addressToEdit) {
       setEditingId(addressToEdit.id);
@@ -59,6 +66,10 @@ export default function Address() {
       setAddressDetails(addressToEdit.details);
       setDeliveryNote(addressToEdit.note || "");
       setLocation(addressToEdit.location);
+      // โหลดค่าเดิมมาแสดงด้วย
+      setDeliveryFee(addressToEdit.deliveryFee || 0);
+      setDistance(addressToEdit.distance || 0);
+      setIsMeetup(addressToEdit.isMeetup || false);
       setIsDefault(addressToEdit.isDefault);
     } else {
       setEditingId(null);
@@ -67,13 +78,15 @@ export default function Address() {
       setAddressDetails("");
       setDeliveryNote("");
       setLocation(null);
+      setDeliveryFee(0);
+      setDistance(0);
+      setIsMeetup(false);
       setIsDefault(addresses.length === 0);
     }
     setShowForm(true);
     setShowMap(false);
   };
 
-  // 🌟 4. เพิ่มการ Validate ข้อมูลใหม่ตอนกดบันทึก
   const handleSave = () => {
     if (!recipientName.trim()) {
       alert("กรุณากรอกชื่อผู้รับครับ/ค่ะ");
@@ -94,7 +107,7 @@ export default function Address() {
 
     let updatedAddresses = [...addresses];
     
-    // ยัดข้อมูลใหม่ใส่ object
+    // 🌟 3. ยัดค่าการจัดส่งลงไปใน Object เตรียมบันทึกเข้า LocalStorage
     const newAddress: AddressItem = {
       id: editingId || Date.now().toString(),
       name: recipientName,
@@ -102,6 +115,9 @@ export default function Address() {
       details: addressDetails,
       note: deliveryNote,
       location,
+      deliveryFee, // บันทึกค่าส่ง 0, 10
+      distance,    // บันทึกกิโลเมตร
+      isMeetup,    // บันทึกสถานะนัดรับ true, false
       isDefault,
     };
 
@@ -164,7 +180,6 @@ export default function Address() {
           )}
         </div>
 
-        {/* --- ส่วนแสดงรายการที่อยู่ --- */}
         {!showForm ? (
           <div className="space-y-4">
             {addresses.length === 0 ? (
@@ -214,12 +229,26 @@ export default function Address() {
                     </div>
                   </div>
 
-                  {/* 🌟 5. แสดง ชื่อ เบอร์โทร รายละเอียด และจุดสังเกต */}
                   <div className="mb-4 text-gray-700 dark:text-gray-300">
                     <p className="font-semibold text-gray-900 dark:text-white mb-1">
                       👤 {addr.name} <span className="text-gray-500 font-normal">({addr.phone})</span>
                     </p>
-                    <p className="whitespace-pre-wrap">{addr.details}</p>
+                    <p className="whitespace-pre-wrap mb-2">{addr.details}</p>
+                    
+                    {/* 🌟 4. เพิ่มป้ายบอกค่าส่งในหน้าแสดงผลด้วย เพื่อให้ลูกค้าเห็นชัดเจน */}
+                    <div className="flex items-center gap-2 mt-3 mb-2">
+                      <span className={`px-2 py-1 rounded-md text-xs font-bold ${
+                        addr.isMeetup ? "bg-blue-100 text-blue-700" :
+                        addr.deliveryFee === 0 ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                      }`}>
+                        {addr.isMeetup ? "🤝 นัดรับสินค้า" : "🛵 บริการจัดส่ง"}
+                      </span>
+                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">
+                        {addr.deliveryFee === 0 ? "ส่งฟรี" : `ค่าบริการ ${addr.deliveryFee} บาท`}
+                        <span className="text-gray-400 font-normal ml-1">({addr.distance.toFixed(1)} กม.)</span>
+                      </span>
+                    </div>
+
                     {addr.note && (
                       <p className="text-sm text-orange-600 dark:text-orange-400 mt-2 font-medium bg-orange-100 dark:bg-orange-900/20 p-2 rounded-lg inline-block">
                         📌 จุดสังเกต: {addr.note}
@@ -246,14 +275,11 @@ export default function Address() {
             )}
           </div>
         ) : (
-          
-          /* --- ส่วนฟอร์มกรอกที่อยู่ --- */
           <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">
               {editingId ? "แก้ไขที่อยู่" : "เพิ่มที่อยู่ใหม่"}
             </h2>
 
-            {/* 🌟 6. เพิ่มฟิลด์ ชื่อผู้รับ และ เบอร์โทร (จัดแบบ Grid 2 คอลัมน์) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
@@ -294,7 +320,6 @@ export default function Address() {
               />
             </div>
 
-            {/* 🌟 7. เพิ่มฟิลด์ จุดสังเกต */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
                 คำอธิบายจุดสังเกตในการจัดส่ง (ตัวเลือก)
@@ -321,7 +346,7 @@ export default function Address() {
                           <span>✅ ปักหมุดเรียบร้อยแล้ว</span>
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Lat: {location.lat.toFixed(6)}, Lng: {location.lng.toFixed(6)}
+                          ระยะทางจัดส่ง: {distance.toFixed(1)} กม. | {isMeetup ? "🤝 นัดรับสินค้า" : deliveryFee === 0 ? "🎉 ส่งฟรี" : `💰 ค่าจัดส่ง ${deliveryFee} บาท`}
                         </p>
                       </div>
                     ) : (
@@ -336,18 +361,26 @@ export default function Address() {
                   </button>
                 </div>
               ) : (
-                <div className="relative border-2 border-orange-500 rounded-xl overflow-hidden">
-                  <SelectLocation
-                    onLocationConfirm={(lat, lng) => {
+                // 🎯 เอาแบบเดิมกลับมา แต่เปลี่ยนความสูงเป็น h-[75vh] และบังคับความสูงขั้นต่ำ min-h-[600px]
+                <div className="relative h-[75vh] min-h-[600px] border-2 border-emerald-500 rounded-xl overflow-hidden flex flex-col">
+                  <SelectMaps
+                    onLocationConfirm={(lat, lng, fee, dist, meetup) => {
                       setLocation({ lat, lng });
+                      setDeliveryFee(fee);
+                      setDistance(dist);
+                      setIsMeetup(meetup);
                       setShowMap(false);
                     }}
                   />
+                  
+                  {/* ปุ่ม X สีแดงแบบเดิมของคุณ */}
                   <button
                     onClick={() => setShowMap(false)}
                     className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-md z-[1000] transition-colors"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                 </div>
               )}
