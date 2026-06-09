@@ -34,35 +34,32 @@ export default function App() {
       try {
         await liff.init({ liffId: LIFF_ID });
         if (liff.isLoggedIn()) {
+          // 🎯 เช็กว่ามี userData ใน localStorage อยู่แล้วหรือไม่
           const savedUser = localStorage.getItem("userData");
           if (savedUser) {
             try {
               const parsedUser = JSON.parse(savedUser);
               if (parsedUser.provider === "line") {
                 setUser(parsedUser);
-                console.log("✅ ใช้ข้อมูลผู้ใช้เดิมจาก localStorage (LIFF session ยังอยู่)");
+                console.log(
+                  "✅ ใช้ข้อมูลผู้ใช้เดิมจาก localStorage (LIFF session ยังอยู่)",
+                );
                 return;
               }
             } catch (parseErr) {
               console.error("Parse userData error:", parseErr);
             }
           }
-          // ถ้าไม่มี userData ให้ดึงข้อมูลจาก API ใหม่
+          // ถ้าไม่มี userData หรือไม่ใช่ LINE provider ให้ลอง authenticate ใหม่
           handleLineUserData();
         } else {
-          // 🎯 [จุดที่แก้ไข] ถ้าระบบไม่ได้ login LIFF แต่ดันมีข้อมูลค้างอยู่ ให้เคลียร์ทิ้ง
-          // ❌ ห้ามเรียก liff.login() อัตโนมัติเด็ดขาด ป้องกันบั๊ก 400 Bad Request
-          const savedUser = localStorage.getItem("userData");
-          if (savedUser) {
-            try {
-              const parsedUser = JSON.parse(savedUser);
-              if (parsedUser.provider === "line") {
-                localStorage.removeItem("userData");
-                setUser(null);
-              }
-            } catch (e) {
-              console.error("Error clearing stale user data", e);
-            }
+          // 🎯 ถ้า LIFF ยังไม่ login แต่อยู่ใน LINE environment ให้ login อัตโนมัติ
+          // เพื่อป้องกันการ redirect ไปหน้า login แล้วไป LINE login page ซ้ำ
+          if (liff.isInClient()) {
+            console.log(
+              "🎯 อยู่ใน LINE environment แต่ยังไม่ login → login อัตโนมัติ",
+            );
+            liff.login();
           }
         }
       } catch (err) {
@@ -108,7 +105,7 @@ export default function App() {
         localStorage.setItem("userData", JSON.stringify(lineUser));
 
         const firebaseToken = await userCredential.user.getIdToken(true);
-        await fetch(
+        const syncRes = await fetch(
           "https://api-gateway-879165280409.asia-southeast1.run.app/api/users/sync",
           {
             method: "POST",
@@ -120,7 +117,18 @@ export default function App() {
           },
         );
 
-        console.log("✅ ล็อกอิน LINE + บันทึก Firestore สำเร็จ!");
+        if (syncRes.ok) {
+          const resData = await syncRes.json();
+          const syncedUser = resData.data;
+
+          const finalLineUser = {
+            ...lineUser,
+            role: syncedUser?.role || "user", // 🎯 นำสิทธิ์จริงมาบันทึก
+          };
+
+          setUser(finalLineUser);
+          localStorage.setItem("userData", JSON.stringify(finalLineUser));
+        }
       }
     } catch (err) {
       console.error("LINE Auth Error:", err);
@@ -136,12 +144,28 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
+        // 🎯 ดึงข้อมูลเดิมในคลังมาตรวจสอบก่อนเพื่อรักษาค่า role ปัจจุบันไว้
+        const savedUserStr = localStorage.getItem("userData");
+        let existingRole = "user";
+
+        if (savedUserStr) {
+          try {
+            const parsed = JSON.parse(savedUserStr);
+            if (parsed.uid === currentUser.uid) {
+              existingRole = parsed.role || "user";
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
         const userDataToSave = {
           uid: currentUser.uid,
           email: currentUser.email,
           displayName: currentUser.displayName,
           photoURL: currentUser.photoURL,
           provider: "firebase",
+          role: existingRole, // 🎯 นำค่าสิทธิ์เดิมกลับมาใส่ ห้ามปล่อยเป็นค่าว่าง
         };
         setUser(userDataToSave);
         localStorage.setItem("userData", JSON.stringify(userDataToSave));
@@ -203,11 +227,10 @@ export default function App() {
       {/* 1. Header */}
       {user && !isPaymentPage && <Header user={user} setUser={setUser} />}
 
-      {/* 2. Mobile Menu Bar (แสดงเฉพาะมือถือและแท็บเล็ต - เอาไว้ใต้ Header) */}
+      {/* 2. Mobile Menu Bar (แสดงเฉพาะมือถือและแท็บเล็ต) */}
       {user && !isPaymentPage && (
         <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-50 bg-emerald-50 dark:bg-emerald-900/20 border-t border-emerald-100 dark:border-emerald-800 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] flex justify-around items-center p-2">
           {menuConfig.filter(hasPermission).map((item, index) => {
-            const icon = item.label.split(" ")[0];
             const isActive = location.pathname === item.to;
             return (
               <Link
@@ -219,7 +242,12 @@ export default function App() {
                     : "text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-800/30"
                 }`}
               >
-                <span className="text-2xl">{icon}</span>
+                {/* 🎯 แสดงผลเฉพาะไอคอน! (ถ้าระบุรูป png จะเอารูปมาโชว์ ถ้าไม่มีรูปจะเอา Emoji มาโชว์) */}
+                <img 
+                    src={item.iconUrl} 
+                    alt="" /* ปล่อยว่างเพื่อไม่ให้มีตัวหนังสือโผล่มากวนใจตอนรูปไม่ขึ้น */
+                    className="w-7 h-7 object-contain drop-shadow-sm" 
+                  />
               </Link>
             );
           })}

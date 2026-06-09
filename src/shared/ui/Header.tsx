@@ -5,7 +5,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "../../modules/const/firebase";
 import liff from "@line/liff";
 import { useCart } from "../context/CartContext";
-import CartModal from "./CartModal";
+import CartModal from "../components/CartModal";
 
 interface HeaderProps {
   user: any;

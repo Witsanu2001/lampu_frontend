@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { auth, facebookProvider } from "../const/firebase";
 import {
   signInWithEmailAndPassword,
@@ -14,26 +14,11 @@ interface LoginProps {
   setUser: (user: any) => void;
 }
 
-const LIFF_ID = "2010209102-zHsx4M0r";
-
 export default function Login({ setUser }: LoginProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoginView, setIsLoginView] = useState(true);
   const [error, setError] = useState("");
-
-  // 🎯 Auto-login LINE เมื่ออยู่ใน LINE environment
-  // 🎯 [จุดที่แก้ไข] เอาการล็อกอินอัตโนมัติออก ให้ผู้ใช้กดปุ่ม "ดำเนินการต่อด้วย LINE" เอง
-  useEffect(() => {
-    const initLiffInLogin = async () => {
-      try {
-        await liff.init({ liffId: LIFF_ID });
-      } catch (err) {
-        console.error("LIFF Init Error in Login:", err);
-      }
-    };
-    initLiffInLogin();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,19 +43,17 @@ export default function Login({ setUser }: LoginProps) {
       const user = userCredential.user;
       const idToken = await user.getIdToken(true);
 
-      const updatedUser = {
+      // สร้าง Object ผู้ใช้เบื้องต้น
+      let updatedUser: any = {
         uid: user.uid,
         email: user.email || "",
         displayName: user.displayName || email.split("@")[0],
         photoURL: user.photoURL || "",
         provider: "email",
+        role: "user", // ใส่ค่าเริ่มต้นไว้ก่อน
       };
 
-      // 🌟 2. เซฟลง State ของ React
-      setUser(updatedUser);
-      localStorage.setItem("userData", JSON.stringify(updatedUser));
-
-      // 🌟 3. ยิงข้อมูลไปหา API Gateway เพื่อบันทึกลง Firestore
+      // 🌟 2. ยิงข้อมูลไปหา API Gateway เพื่อบันทึกและดึง role จาก Firestore
       try {
         const syncResponse = await fetch(
           "https://api-gateway-879165280409.asia-southeast1.run.app/api/users/sync",
@@ -85,11 +68,23 @@ export default function Login({ setUser }: LoginProps) {
         );
 
         if (syncResponse.ok) {
-          console.log("✅ บันทึกผู้ใช้อีเมลลงฐานข้อมูลสำเร็จ!");
+          const resData = await syncResponse.json();
+          const syncedUser = resData.data;
+          
+          // 🎯 นำค่า role จากเซิร์ฟเวอร์มาอัปเดต (ถ้าเป็น user เก่าอาจจะได้สิทธิ์ admin กลับมา)
+          updatedUser = {
+            ...updatedUser,
+            role: syncedUser?.role || "user",
+          };
+          console.log("✅ บันทึกผู้ใช้อีเมลลงฐานข้อมูลสำเร็จ! สิทธิ์ปัจจุบัน:", updatedUser.role);
         }
       } catch (apiErr) {
         console.error("❌ เกิดข้อผิดพลาดในการเชื่อมต่อ Backend:", apiErr);
       }
+
+      // 🌟 3. เซฟลง State ของ React และ LocalStorage (หลังอัปเดต Role แล้ว)
+      setUser(updatedUser);
+      localStorage.setItem("userData", JSON.stringify(updatedUser));
 
       setEmail("");
       setPassword("");
@@ -120,20 +115,17 @@ export default function Login({ setUser }: LoginProps) {
           const realPicUrl = data.picture.data.url;
           await updateProfile(result.user, { photoURL: realPicUrl });
 
-          // จัดรูปแบบข้อมูลสำหรับเซฟลง State และส่งไปให้ Backend
-          const updatedUser = {
+          // จัดรูปแบบข้อมูลเบื้องต้น
+          let updatedUser: any = {
             uid: result.user.uid,
             email: result.user.email || "",
             displayName: result.user.displayName || "ผู้ใช้ใหม่",
             photoURL: realPicUrl || "",
             provider: "facebook",
+            role: "user", // ใส่ค่าเริ่มต้นไว้ก่อน
           };
 
-          // บันทึกลง State ของ React และ LocalStorage
-          setUser(updatedUser);
-          localStorage.setItem("userData", JSON.stringify(updatedUser));
-
-          // 🌟 3. ยิงข้อมูลไปหา API Gateway
+          // 🌟 3. ยิงข้อมูลไปหา API Gateway เพื่อบันทึกและดึง role
           try {
             const idToken = await result.user.getIdToken(true);
 
@@ -151,13 +143,24 @@ export default function Login({ setUser }: LoginProps) {
 
             if (syncResponse.ok) {
               const resData = await syncResponse.json();
-              console.log("✅ ยิง API สำเร็จ! ตอบกลับจากเซิร์ฟเวอร์:", resData);
+              const syncedUser = resData.data;
+
+              // 🎯 นำค่า role จากเซิร์ฟเวอร์มาอัปเดต
+              updatedUser = {
+                ...updatedUser,
+                role: syncedUser?.role || "user",
+              };
+              console.log("✅ ยิง API สำเร็จ! สิทธิ์ผู้ใช้คือ:", updatedUser.role);
             } else {
               console.error("❌ ยิง API ไม่สำเร็จ สถานะ:", syncResponse.status);
             }
           } catch (apiErr) {
             console.error("❌ เกิดข้อผิดพลาดในการเรียก API Gateway:", apiErr);
           }
+
+          // 🌟 4. บันทึกลง State ของ React และ LocalStorage (หลังอัปเดต Role แล้ว)
+          setUser(updatedUser);
+          localStorage.setItem("userData", JSON.stringify(updatedUser));
         }
       }
     } catch (err: any) {
@@ -233,7 +236,6 @@ export default function Login({ setUser }: LoginProps) {
             type="button"
             className="w-full py-3 bg-[#00B900] hover:bg-[#009900] text-white font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex justify-center items-center gap-2"
           >
-            {/* สามารถใส่ไอคอน LINE ตรงนี้ได้ */}
             ดำเนินการต่อด้วย LINE
           </button>
 
@@ -242,7 +244,6 @@ export default function Login({ setUser }: LoginProps) {
             type="button"
             className="w-full py-3 bg-[#1877F2] hover:bg-[#166FE5] text-white font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex justify-center items-center gap-2"
           >
-            {/* สามารถใส่ไอคอน Facebook ตรงนี้ได้ */}
             ดำเนินการต่อด้วย Facebook
           </button>
         </div>

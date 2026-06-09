@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import Map, { Source, Layer } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-// 📍 1. พิกัดร้าน ลำพูหมูกระทะ (ถ้ำพรรณรา)
-const SHOP_LAT = 8.301677;
-const SHOP_LNG = 99.365736;
+// 📍 1. พิกัดร้าน ลำพูหมูกระทะ (ทุ่งใหญ่)
+const SHOP_LAT = 8.300893140259126;
+const SHOP_LNG = 99.36760271084832;
 
 // 💰 2. ตั้งค่าโซนระยะทางและราคา
 const ZONE_1_MAX = 1.3; // ไม่เกิน 2 กม. (ส่งฟรี)
@@ -69,8 +69,8 @@ interface SelectMapsProps {
 
 const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
   const [viewState, setViewState] = useState({
-    longitude: 99.365736,
-    latitude: 8.301677,
+    longitude: 99.36760271084832,
+    latitude: 8.300893140259126,
     zoom: 15
   });
 

@@ -17,6 +17,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const analytics = getAnalytics(app); 
 export const auth = getAuth(app);
-// 🎯 เปิดใช้งาน Firebase Auth persistence เพื่อรักษา session ไว้
+
 auth.setPersistence(browserLocalPersistence); 
 export const facebookProvider = new FacebookAuthProvider();

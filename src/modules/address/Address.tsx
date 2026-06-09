@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect } from "react";
 import SelectMaps from "../SelectMaps"; // เปลี่ยน path ให้ตรงกับโฟลเดอร์ของคุณถ้าจำเป็น
+import { useNavigate } from "react-router-dom";
 
 // 🌟 1. เพิ่มค่า ค่าส่ง, ระยะทาง, และสถานะนัดรับ ลงใน Interface
 interface AddressItem {
@@ -17,6 +18,7 @@ interface AddressItem {
 }
 
 export default function Address() {
+  const navigate = useNavigate();
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
 
   const [showForm, setShowForm] = useState(false);
@@ -172,6 +174,25 @@ export default function Address() {
     <div className="h-full overflow-y-auto py-10 px-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex justify-between items-center mb-8">
+          <button
+            onClick={() => navigate("/payment")}
+            className="flex items-center justify-center w-10 h-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300"
+            aria-label="กลับไปหน้าหลัก"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
             ที่อยู่จัดส่งของคุณ
           </h1>
