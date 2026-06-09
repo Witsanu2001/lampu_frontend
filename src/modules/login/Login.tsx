@@ -9,6 +9,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import liff from "@line/liff";
+import { postUsersSync } from "../api/api_login";
 
 interface LoginProps {
   setUser: (user: any) => void;
@@ -53,30 +54,20 @@ export default function Login({ setUser }: LoginProps) {
         role: "user", // ใส่ค่าเริ่มต้นไว้ก่อน
       };
 
-      // 🌟 2. ยิงข้อมูลไปหา API Gateway เพื่อบันทึกและดึง role จาก Firestore
       try {
-        const syncResponse = await fetch(
-          "https://api-gateway-879165280409.asia-southeast1.run.app/api/users/sync",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${idToken}`,
-            },
-            body: JSON.stringify(updatedUser),
-          },
-        );
+        const syncResponse = await postUsersSync(idToken, updatedUser);
 
         if (syncResponse.ok) {
           const resData = await syncResponse.json();
           const syncedUser = resData.data;
-          
-          // 🎯 นำค่า role จากเซิร์ฟเวอร์มาอัปเดต (ถ้าเป็น user เก่าอาจจะได้สิทธิ์ admin กลับมา)
           updatedUser = {
             ...updatedUser,
             role: syncedUser?.role || "user",
           };
-          console.log("✅ บันทึกผู้ใช้อีเมลลงฐานข้อมูลสำเร็จ! สิทธิ์ปัจจุบัน:", updatedUser.role);
+          console.log(
+            "✅ บันทึกผู้ใช้อีเมลลงฐานข้อมูลสำเร็จ! สิทธิ์ปัจจุบัน:",
+            updatedUser.role,
+          );
         }
       } catch (apiErr) {
         console.error("❌ เกิดข้อผิดพลาดในการเชื่อมต่อ Backend:", apiErr);
@@ -97,11 +88,7 @@ export default function Login({ setUser }: LoginProps) {
     setError("");
     try {
       facebookProvider.addScope("public_profile");
-
-      // 🌟 1. ล็อกอินด้วย Popup
       const result = await signInWithPopup(auth, facebookProvider);
-
-      // 🌟 2. ดึงข้อมูลพิกัดรูปภาพระดับ HD
       const credential = FacebookAuthProvider.credentialFromResult(result);
       const token = credential?.accessToken;
 
@@ -114,51 +101,32 @@ export default function Login({ setUser }: LoginProps) {
         if (data?.picture?.data) {
           const realPicUrl = data.picture.data.url;
           await updateProfile(result.user, { photoURL: realPicUrl });
-
-          // จัดรูปแบบข้อมูลเบื้องต้น
           let updatedUser: any = {
             uid: result.user.uid,
             email: result.user.email || "",
             displayName: result.user.displayName || "ผู้ใช้ใหม่",
             photoURL: realPicUrl || "",
             provider: "facebook",
-            role: "user", // ใส่ค่าเริ่มต้นไว้ก่อน
+            role: "user",
           };
 
-          // 🌟 3. ยิงข้อมูลไปหา API Gateway เพื่อบันทึกและดึง role
           try {
             const idToken = await result.user.getIdToken(true);
-
-            const syncResponse = await fetch(
-              "https://api-gateway-879165280409.asia-southeast1.run.app/api/users/sync",
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${idToken}`,
-                },
-                body: JSON.stringify(updatedUser),
-              },
-            );
+            const syncResponse = await postUsersSync(idToken, updatedUser);
 
             if (syncResponse.ok) {
               const resData = await syncResponse.json();
               const syncedUser = resData.data;
-
-              // 🎯 นำค่า role จากเซิร์ฟเวอร์มาอัปเดต
               updatedUser = {
                 ...updatedUser,
                 role: syncedUser?.role || "user",
               };
-              console.log("✅ ยิง API สำเร็จ! สิทธิ์ผู้ใช้คือ:", updatedUser.role);
             } else {
               console.error("❌ ยิง API ไม่สำเร็จ สถานะ:", syncResponse.status);
             }
           } catch (apiErr) {
             console.error("❌ เกิดข้อผิดพลาดในการเรียก API Gateway:", apiErr);
           }
-
-          // 🌟 4. บันทึกลง State ของ React และ LocalStorage (หลังอัปเดต Role แล้ว)
           setUser(updatedUser);
           localStorage.setItem("userData", JSON.stringify(updatedUser));
         }

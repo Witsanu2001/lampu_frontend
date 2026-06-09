@@ -16,6 +16,7 @@ import "../../style/App.css";
 
 import Header from "./Header";
 import { menuConfig, type MenuItem } from "./menu";
+import { postLineAuth, postUsersSync } from "../../modules/api/api_login";
 
 const LIFF_ID = "2010209102-zHsx4M0r";
 
@@ -74,14 +75,7 @@ export default function App() {
       const lineIdToken = liff.getIDToken();
 
       if (lineIdToken) {
-        const res = await fetch(
-          "https://api-gateway-879165280409.asia-southeast1.run.app/api/auth/line",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id_token: lineIdToken }),
-          },
-        );
+        const res = await postLineAuth(lineIdToken);
 
         if (!res.ok) throw new Error("แลกโทเค็นไม่สำเร็จ");
         const data = await res.json();
@@ -93,48 +87,40 @@ export default function App() {
 
         const profile = await liff.getProfile();
         const decodedToken = liff.getDecodedIDToken() as any;
-        const lineUser = {
+        
+        let lineUser: any = {
           uid: profile.userId,
           email: decodedToken?.email || "",
           displayName: profile.displayName,
           photoURL: profile.pictureUrl,
           provider: "line",
+          role: "user" 
         };
 
-        setUser(lineUser);
-        localStorage.setItem("userData", JSON.stringify(lineUser));
-
         const firebaseToken = await userCredential.user.getIdToken(true);
-        const syncRes = await fetch(
-          "https://api-gateway-879165280409.asia-southeast1.run.app/api/users/sync",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${firebaseToken}`,
-            },
-            body: JSON.stringify(lineUser),
-          },
-        );
+        
+        // เรียกใช้งานฟังก์ชันแยกตัวเดิม
+        const syncRes = await postUsersSync(firebaseToken, lineUser);
 
         if (syncRes.ok) {
           const resData = await syncRes.json();
           const syncedUser = resData.data;
 
-          const finalLineUser = {
+          lineUser = {
             ...lineUser,
-            role: syncedUser?.role || "user", // 🎯 นำสิทธิ์จริงมาบันทึก
+            role: syncedUser?.role || "user", 
           };
-
-          setUser(finalLineUser);
-          localStorage.setItem("userData", JSON.stringify(finalLineUser));
+          console.log("✅ ล็อกอิน LINE + บันทึกสิทธิ์สำเร็จ! Role:", lineUser.role);
         }
+
+        setUser(lineUser);
+        localStorage.setItem("userData", JSON.stringify(lineUser));
       }
     } catch (err) {
       console.error("LINE Auth Error:", err);
-      // 🎯 เมื่อ LINE token หมดอายุหรือ invalid ต้อง logout และให้ user login ใหม่
-      // เพราะไม่สามารถ restore user state จาก localStorage ได้ (Firebase auth ยังไม่ได้ sign in)
-      liff.logout();
+      if (!liff.isInClient()) {
+         liff.logout();
+      }
       localStorage.removeItem("userData");
       setUser(null);
     }
@@ -243,11 +229,11 @@ export default function App() {
                 }`}
               >
                 {/* 🎯 แสดงผลเฉพาะไอคอน! (ถ้าระบุรูป png จะเอารูปมาโชว์ ถ้าไม่มีรูปจะเอา Emoji มาโชว์) */}
-                <img 
-                    src={item.iconUrl} 
-                    alt="" /* ปล่อยว่างเพื่อไม่ให้มีตัวหนังสือโผล่มากวนใจตอนรูปไม่ขึ้น */
-                    className="w-7 h-7 object-contain drop-shadow-sm" 
-                  />
+                <img
+                  src={item.iconUrl}
+                  alt="" /* ปล่อยว่างเพื่อไม่ให้มีตัวหนังสือโผล่มากวนใจตอนรูปไม่ขึ้น */
+                  className="w-7 h-7 object-contain drop-shadow-sm"
+                />
               </Link>
             );
           })}

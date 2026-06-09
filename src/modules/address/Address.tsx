@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect } from "react";
-import SelectMaps from "../SelectMaps"; // เปลี่ยน path ให้ตรงกับโฟลเดอร์ของคุณถ้าจำเป็น
+import SelectMaps from "./SelectMaps"; // เปลี่ยน path ให้ตรงกับโฟลเดอร์ของคุณถ้าจำเป็น
 import { useNavigate } from "react-router-dom";
 
 // 🌟 1. เพิ่มค่า ค่าส่ง, ระยะทาง, และสถานะนัดรับ ลงใน Interface
