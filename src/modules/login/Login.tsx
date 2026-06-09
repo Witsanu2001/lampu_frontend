@@ -1,12 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { auth, facebookProvider } from "../const/firebase";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, FacebookAuthProvider, updateProfile } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  FacebookAuthProvider,
+  updateProfile,
+} from "firebase/auth";
 import liff from "@line/liff";
 
 interface LoginProps {
   setUser: (user: any) => void;
 }
+
+const LIFF_ID = "2010209102-zHsx4M0r";
 
 export default function Login({ setUser }: LoginProps) {
   const [email, setEmail] = useState("");
@@ -14,15 +22,36 @@ export default function Login({ setUser }: LoginProps) {
   const [isLoginView, setIsLoginView] = useState(true);
   const [error, setError] = useState("");
 
+  // 🎯 Auto-login LINE เมื่ออยู่ใน LINE environment
+  // 🎯 [จุดที่แก้ไข] เอาการล็อกอินอัตโนมัติออก ให้ผู้ใช้กดปุ่ม "ดำเนินการต่อด้วย LINE" เอง
+  useEffect(() => {
+    const initLiffInLogin = async () => {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+      } catch (err) {
+        console.error("LIFF Init Error in Login:", err);
+      }
+    };
+    initLiffInLogin();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     try {
       let userCredential;
       if (isLoginView) {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
+        userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password,
+        );
       } else {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password,
+        );
       }
 
       // 🌟 1. ดึงข้อมูลและ Token ของผู้ใช้ที่เพิ่งล็อกอิน/สมัครสำเร็จ
@@ -43,14 +72,17 @@ export default function Login({ setUser }: LoginProps) {
 
       // 🌟 3. ยิงข้อมูลไปหา API Gateway เพื่อบันทึกลง Firestore
       try {
-        const syncResponse = await fetch("https://api-gateway-879165280409.asia-southeast1.run.app/api/users/sync", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${idToken}`
+        const syncResponse = await fetch(
+          "https://api-gateway-879165280409.asia-southeast1.run.app/api/users/sync",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
+            },
+            body: JSON.stringify(updatedUser),
           },
-          body: JSON.stringify(updatedUser)
-        });
+        );
 
         if (syncResponse.ok) {
           console.log("✅ บันทึกผู้ใช้อีเมลลงฐานข้อมูลสำเร็จ!");
@@ -79,7 +111,9 @@ export default function Login({ setUser }: LoginProps) {
       const token = credential?.accessToken;
 
       if (token) {
-        const response = await fetch(`https://graph.facebook.com/me?fields=picture.width(500).height(500)&access_token=${token}`);
+        const response = await fetch(
+          `https://graph.facebook.com/me?fields=picture.width(500).height(500)&access_token=${token}`,
+        );
         const data = await response.json();
 
         if (data?.picture?.data) {
@@ -103,14 +137,17 @@ export default function Login({ setUser }: LoginProps) {
           try {
             const idToken = await result.user.getIdToken(true);
 
-            const syncResponse = await fetch("https://api-gateway-879165280409.asia-southeast1.run.app/api/users/sync", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${idToken}`
+            const syncResponse = await fetch(
+              "https://api-gateway-879165280409.asia-southeast1.run.app/api/users/sync",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${idToken}`,
+                },
+                body: JSON.stringify(updatedUser),
               },
-              body: JSON.stringify(updatedUser)
-            });
+            );
 
             if (syncResponse.ok) {
               const resData = await syncResponse.json();
@@ -131,13 +168,17 @@ export default function Login({ setUser }: LoginProps) {
   };
 
   const handleLineLogin = () => {
-    if (!liff.isLoggedIn()) liff.login();
+    if (!liff.isLoggedIn()) {
+      // 🎯 ลบ redirectUri ออก ปล่อยให้ liff.login() ทำงานแบบ Default (ปลอดภัยที่สุด)
+      liff.login();
+    } else {
+      window.location.reload();
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
-        
         {/* หัวข้อ */}
         <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-6">
           {isLoginView ? "เข้าสู่ระบบ" : "สมัครสมาชิก"}
@@ -161,13 +202,13 @@ export default function Login({ setUser }: LoginProps) {
             required
             className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
           />
-          
+
           {error && (
             <div className="text-red-500 text-sm text-center font-medium bg-red-50 dark:bg-red-900/30 p-2 rounded-lg">
               {error}
             </div>
           )}
-          
+
           <button
             type="submit"
             className="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
@@ -179,7 +220,9 @@ export default function Login({ setUser }: LoginProps) {
         {/* เส้นแบ่ง "หรือ" */}
         <div className="flex items-center my-6">
           <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
-          <span className="mx-4 text-sm text-gray-500 dark:text-gray-400 font-medium">หรือ</span>
+          <span className="mx-4 text-sm text-gray-500 dark:text-gray-400 font-medium">
+            หรือ
+          </span>
           <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
         </div>
 
@@ -193,7 +236,7 @@ export default function Login({ setUser }: LoginProps) {
             {/* สามารถใส่ไอคอน LINE ตรงนี้ได้ */}
             ดำเนินการต่อด้วย LINE
           </button>
-          
+
           <button
             onClick={handleFacebookLogin}
             type="button"
@@ -214,10 +257,11 @@ export default function Login({ setUser }: LoginProps) {
             }}
             className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium hover:underline transition-colors duration-200"
           >
-            {isLoginView ? "ยังไม่มีบัญชีใช่ไหม? สมัครเลย" : "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ"}
+            {isLoginView
+              ? "ยังไม่มีบัญชีใช่ไหม? สมัครเลย"
+              : "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ"}
           </button>
         </div>
-
       </div>
     </div>
   );

@@ -11,23 +11,25 @@ interface AddressItem {
   note: string;
   location: { lat: number; lng: number } | null;
   deliveryFee: number; // เก็บค่าส่ง
-  distance: number;    // เก็ประยะทาง
-  isMeetup: boolean;   // เก็บสถานะนัดรับ
+  distance: number; // เก็ประยะทาง
+  isMeetup: boolean; // เก็บสถานะนัดรับ
   isDefault: boolean;
 }
 
 export default function Address() {
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
-  
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  
+
   const [recipientName, setRecipientName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [addressDetails, setAddressDetails] = useState("");
   const [deliveryNote, setDeliveryNote] = useState("");
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
+    null,
+  );
+
   // 🌟 2. สร้าง State มารับค่าชั่วคราวตอนปักหมุดเสร็จ
   const [deliveryFee, setDeliveryFee] = useState<number>(0);
   const [distance, setDistance] = useState<number>(0);
@@ -51,7 +53,10 @@ export default function Address() {
       localStorage.setItem("primaryAddress", JSON.stringify(defaultAddr));
     } else if (updatedAddresses.length > 0) {
       updatedAddresses[0].isDefault = true;
-      localStorage.setItem("primaryAddress", JSON.stringify(updatedAddresses[0]));
+      localStorage.setItem(
+        "primaryAddress",
+        JSON.stringify(updatedAddresses[0]),
+      );
     } else {
       localStorage.removeItem("primaryAddress");
     }
@@ -106,7 +111,7 @@ export default function Address() {
     }
 
     let updatedAddresses = [...addresses];
-    
+
     // 🌟 3. ยัดค่าการจัดส่งลงไปใน Object เตรียมบันทึกเข้า LocalStorage
     const newAddress: AddressItem = {
       id: editingId || Date.now().toString(),
@@ -116,14 +121,14 @@ export default function Address() {
       note: deliveryNote,
       location,
       deliveryFee, // บันทึกค่าส่ง 0, 10
-      distance,    // บันทึกกิโลเมตร
-      isMeetup,    // บันทึกสถานะนัดรับ true, false
+      distance, // บันทึกกิโลเมตร
+      isMeetup, // บันทึกสถานะนัดรับ true, false
       isDefault,
     };
 
     if (editingId) {
       updatedAddresses = updatedAddresses.map((addr) =>
-        addr.id === editingId ? newAddress : addr
+        addr.id === editingId ? newAddress : addr,
       );
     } else {
       if (updatedAddresses.length >= 3) {
@@ -184,7 +189,9 @@ export default function Address() {
           <div className="space-y-4">
             {addresses.length === 0 ? (
               <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                <p className="text-gray-500 dark:text-gray-400 mb-4">คุณยังไม่มีที่อยู่จัดส่ง</p>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  คุณยังไม่มีที่อยู่จัดส่ง
+                </p>
                 <button
                   onClick={() => handleOpenForm()}
                   className="px-6 py-2 bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400 font-semibold rounded-lg hover:bg-orange-200 transition-colors"
@@ -231,21 +238,33 @@ export default function Address() {
 
                   <div className="mb-4 text-gray-700 dark:text-gray-300">
                     <p className="font-semibold text-gray-900 dark:text-white mb-1">
-                      👤 {addr.name} <span className="text-gray-500 font-normal">({addr.phone})</span>
+                      👤 {addr.name}{" "}
+                      <span className="text-gray-500 font-normal">
+                        ({addr.phone})
+                      </span>
                     </p>
                     <p className="whitespace-pre-wrap mb-2">{addr.details}</p>
-                    
+
                     {/* 🌟 4. เพิ่มป้ายบอกค่าส่งในหน้าแสดงผลด้วย เพื่อให้ลูกค้าเห็นชัดเจน */}
                     <div className="flex items-center gap-2 mt-3 mb-2">
-                      <span className={`px-2 py-1 rounded-md text-xs font-bold ${
-                        addr.isMeetup ? "bg-blue-100 text-blue-700" :
-                        addr.deliveryFee === 0 ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded-md text-xs font-bold ${
+                          addr.isMeetup
+                            ? "bg-blue-100 text-blue-700"
+                            : addr.deliveryFee === 0
+                              ? "bg-green-100 text-green-700"
+                              : "bg-orange-100 text-orange-700"
+                        }`}
+                      >
                         {addr.isMeetup ? "🤝 นัดรับสินค้า" : "🛵 บริการจัดส่ง"}
                       </span>
                       <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">
-                        {addr.deliveryFee === 0 ? "ส่งฟรี" : `ค่าบริการ ${addr.deliveryFee} บาท`}
-                        <span className="text-gray-400 font-normal ml-1">({addr.distance.toFixed(1)} กม.)</span>
+                        {addr.deliveryFee === 0
+                          ? "ส่งฟรี"
+                          : `ค่าบริการ ${addr.deliveryFee || 0} บาท`}
+                        <span className="text-gray-400 font-normal ml-1">
+                          ({(addr.distance || 0).toFixed(1)} กม.)
+                        </span>
                       </span>
                     </div>
 
@@ -267,7 +286,7 @@ export default function Address() {
                 </div>
               ))
             )}
-            
+
             {addresses.length >= 3 && (
               <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
                 * คุณได้เพิ่มที่อยู่ครบจำนวนสูงสุด (3 แห่ง) แล้ว
@@ -346,11 +365,18 @@ export default function Address() {
                           <span>✅ ปักหมุดเรียบร้อยแล้ว</span>
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          ระยะทางจัดส่ง: {distance.toFixed(1)} กม. | {isMeetup ? "🤝 นัดรับสินค้า" : deliveryFee === 0 ? "🎉 ส่งฟรี" : `💰 ค่าจัดส่ง ${deliveryFee} บาท`}
+                          ระยะทางจัดส่ง: {(distance || 0).toFixed(1)} กม. |{" "}
+                          {isMeetup
+                            ? "🤝 นัดรับสินค้า"
+                            : deliveryFee === 0
+                              ? "🎉 ส่งฟรี"
+                              : `💰 ค่าจัดส่ง ${deliveryFee || 0} บาท`}
                         </p>
                       </div>
                     ) : (
-                      <p className="text-orange-500 font-medium">📍 ยังไม่ได้เลือกพิกัดจัดส่ง</p>
+                      <p className="text-orange-500 font-medium">
+                        📍 ยังไม่ได้เลือกพิกัดจัดส่ง
+                      </p>
                     )}
                   </div>
                   <button
@@ -372,14 +398,24 @@ export default function Address() {
                       setShowMap(false);
                     }}
                   />
-                  
+
                   {/* ปุ่ม X สีแดงแบบเดิมของคุณ */}
                   <button
                     onClick={() => setShowMap(false)}
                     className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-md z-[1000] transition-colors"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -392,7 +428,7 @@ export default function Address() {
                   type="checkbox"
                   checked={isDefault}
                   onChange={(e) => setIsDefault(e.target.checked)}
-                  disabled={addresses.length === 0} 
+                  disabled={addresses.length === 0}
                   className="w-5 h-5 text-orange-500 rounded focus:ring-orange-500 border-gray-300 dark:border-gray-600"
                 />
                 <span className="text-gray-800 dark:text-gray-200 font-medium">

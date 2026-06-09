@@ -1,7 +1,7 @@
 // src/firebase.ts
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getAuth, FacebookAuthProvider } from "firebase/auth";
+import { getAuth, FacebookAuthProvider, browserLocalPersistence } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDtAh4kgX22ShZNv5wxcwprOW5Hz886TqU",
@@ -16,5 +16,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const analytics = getAnalytics(app); 
-export const auth = getAuth(app); 
+export const auth = getAuth(app);
+// 🎯 เปิดใช้งาน Firebase Auth persistence เพื่อรักษา session ไว้
+auth.setPersistence(browserLocalPersistence); 
 export const facebookProvider = new FacebookAuthProvider();

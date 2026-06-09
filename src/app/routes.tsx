@@ -16,29 +16,29 @@ export default function AppRoutes({ user, setUser }: AppRoutesProps) {
   return (
     <Routes>
 
-      <Route 
-        path="/" 
-        element={user ? <Home /> : <Navigate to="/login" replace />} 
-      />
-      
-      <Route 
-        path="/login" 
-        element={!user ? <Login setUser={setUser} /> : <Navigate to="/" replace />} 
-      />
-      
-      <Route 
-        path="/orders" 
-        element={user ? <Order /> : <Navigate to="/login" replace />} 
+      <Route
+        path="/"
+        element={user ? <Home /> : <Login setUser={setUser} />}
       />
 
-      <Route 
-        path="/payment" 
-        element={user ? <Payment /> : <Navigate to="/login" replace />} 
+      <Route
+        path="/login"
+        element={!user ? <Login setUser={setUser} /> : <Navigate to="/" replace />}
       />
 
-      <Route 
-        path="/address" 
-        element={user ? <Address /> : <Navigate to="/login" replace />} 
+      <Route
+        path="/orders"
+        element={user ? <Order /> : <Login setUser={setUser} />}
+      />
+
+      <Route
+        path="/payment"
+        element={user ? <Payment /> : <Login setUser={setUser} />}
+      />
+
+      <Route
+        path="/address"
+        element={user ? <Address /> : <Login setUser={setUser} />}
       />
     </Routes>
   );

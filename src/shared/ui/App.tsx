@@ -34,7 +34,36 @@ export default function App() {
       try {
         await liff.init({ liffId: LIFF_ID });
         if (liff.isLoggedIn()) {
+          const savedUser = localStorage.getItem("userData");
+          if (savedUser) {
+            try {
+              const parsedUser = JSON.parse(savedUser);
+              if (parsedUser.provider === "line") {
+                setUser(parsedUser);
+                console.log("✅ ใช้ข้อมูลผู้ใช้เดิมจาก localStorage (LIFF session ยังอยู่)");
+                return;
+              }
+            } catch (parseErr) {
+              console.error("Parse userData error:", parseErr);
+            }
+          }
+          // ถ้าไม่มี userData ให้ดึงข้อมูลจาก API ใหม่
           handleLineUserData();
+        } else {
+          // 🎯 [จุดที่แก้ไข] ถ้าระบบไม่ได้ login LIFF แต่ดันมีข้อมูลค้างอยู่ ให้เคลียร์ทิ้ง
+          // ❌ ห้ามเรียก liff.login() อัตโนมัติเด็ดขาด ป้องกันบั๊ก 400 Bad Request
+          const savedUser = localStorage.getItem("userData");
+          if (savedUser) {
+            try {
+              const parsedUser = JSON.parse(savedUser);
+              if (parsedUser.provider === "line") {
+                localStorage.removeItem("userData");
+                setUser(null);
+              }
+            } catch (e) {
+              console.error("Error clearing stale user data", e);
+            }
+          }
         }
       } catch (err) {
         console.error("LIFF Init Error:", err);
@@ -95,6 +124,11 @@ export default function App() {
       }
     } catch (err) {
       console.error("LINE Auth Error:", err);
+      // 🎯 เมื่อ LINE token หมดอายุหรือ invalid ต้อง logout และให้ user login ใหม่
+      // เพราะไม่สามารถ restore user state จาก localStorage ได้ (Firebase auth ยังไม่ได้ sign in)
+      liff.logout();
+      localStorage.removeItem("userData");
+      setUser(null);
     }
   };
 
@@ -221,7 +255,9 @@ export default function App() {
         )}
 
         {/* 3. Main Content */}
-        <main className={`flex-1 overflow-y-auto relative ${!isPaymentPage ? 'pb-20 xl:pb-0' : ''}`}>
+        <main
+          className={`flex-1 overflow-y-auto relative ${!isPaymentPage ? "pb-20 xl:pb-0" : ""}`}
+        >
           <AppRoutes user={user} setUser={setUser} />
         </main>
       </div>

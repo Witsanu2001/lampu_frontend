@@ -23,7 +23,7 @@ export const menuConfig: MenuItem[] = [
   {
     label: "⚙️ จัดการระบบ (Admin)",
     to: "/admin-dashboard",
-    roles: ["admin"], // เห็นและเข้าได้เฉพาะคนที่มี role เป็น admin เท่านั้น
+    roles: ["admin"],
     submenu: [
       {
         label: "📊 แดชบอร์ดข้อมูล",
