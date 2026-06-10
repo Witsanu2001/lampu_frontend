@@ -3,7 +3,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Home from "../modules/home/Home";
 import Login from "../modules/login/Login";
-import Order from "../modules/order/Order";
+import OrderList from "../modules/order/OrderList";
 import Payment from "../modules/order/Payment";
 import Address from "../modules/address/Address";
 
@@ -28,7 +28,7 @@ export default function AppRoutes({ user, setUser }: AppRoutesProps) {
 
       <Route
         path="/orders"
-        element={user ? <Order /> : <Login setUser={setUser} />}
+        element={user ? <OrderList /> : <Login setUser={setUser} />}
       />
 
       <Route

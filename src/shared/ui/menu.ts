@@ -25,7 +25,7 @@ export const menuConfig: MenuItem[] = [
     iconUrl: Order,
   },
   {
-    label: "จัดการระบบ",
+    label: "ตั้งค่า",
     to: "/settings",
     iconUrl: Setting,
   },

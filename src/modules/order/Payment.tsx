@@ -179,6 +179,54 @@ export default function Payment() {
       alert("กรุณาอัปโหลดสลิปหลักฐานการโอนเงินก่อนยืนยันคำสั่งซื้อครับ/ค่ะ");
       return;
     }
+
+    // บันทึกรายการทั้งหมดลงใน log (ไม่รวมรูปภาพ)
+    const orderData = {
+      mainItems: cart.map((item) => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        subtotal: item.price * item.quantity,
+      })),
+      addOnItems: selectedAddOns.map((item) => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        subtotal: item.price * item.quantity,
+      })),
+      equipment: {
+        stoveCount,
+        panCount,
+        charcoalCount,
+        extraStoves: Math.max(0, stoveCount - mainItemsCount),
+        extraPans: Math.max(0, panCount - mainItemsCount),
+        stoveFee: Math.max(0, stoveCount - mainItemsCount) * 30,
+        panFee: Math.max(0, panCount - mainItemsCount) * 20,
+        charcoalFee: charcoalCount * 10,
+      },
+      shipping: {
+        address: shippingAddress.details || shippingAddress.address,
+        location: shippingAddress.location,
+        feePerSet: deliveryFeePerSet,
+        totalFee: shippingFee,
+      },
+      payment: {
+        method: paymentMethod,
+        hasSlip: !!slipPreview,
+      },
+      totals: {
+        cartTotal,
+        addOnTotal,
+        shippingFee,
+        grandTotal,
+      },
+    };
+
+    console.log("=== รายการสั่งซื้อทั้งหมด ===");
+    console.log(JSON.stringify(orderData, null, 2));
+
     clearCart();
     setSelectedAddOns([]);
     setStoveCount(1);
