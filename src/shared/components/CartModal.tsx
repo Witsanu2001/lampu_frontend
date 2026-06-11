@@ -80,7 +80,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
             <div className="flex gap-3">
               <button onClick={clearCart} className="flex-1 py-3 bg-gray-200 dark:bg-gray-700 rounded-lg font-semibold">ล้างตะกร้า</button>
               <button 
-                onClick={() => { onClose(); navigate("/payment"); }} 
+                onClick={() => { onClose(); navigate("/orders/payment"); }} 
                 className="flex-1 py-3 bg-emerald-500 text-white rounded-lg font-semibold"
               >
                 ชำระเงิน

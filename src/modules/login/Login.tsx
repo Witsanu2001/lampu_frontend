@@ -10,6 +10,7 @@ import {
 } from "firebase/auth";
 import liff from "@line/liff";
 import { postUsersSync } from "../api/api_login";
+import { setToken } from "../../shared/infra/auth/token";
 
 interface LoginProps {
   setUser: (user: any) => void;
@@ -20,10 +21,12 @@ export default function Login({ setUser }: LoginProps) {
   const [password, setPassword] = useState("");
   const [isLoginView, setIsLoginView] = useState(true);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsLoading(true);
     try {
       let userCredential;
       if (isLoginView) {
@@ -43,6 +46,9 @@ export default function Login({ setUser }: LoginProps) {
       // 🌟 1. ดึงข้อมูลและ Token ของผู้ใช้ที่เพิ่งล็อกอิน/สมัครสำเร็จ
       const user = userCredential.user;
       const idToken = await user.getIdToken(true);
+
+      // เก็บ token ไว้ใน localStorage พร้อม expiry time
+      setToken(idToken, 24); // 24 hours expiry
 
       // สร้าง Object ผู้ใช้เบื้องต้น
       let updatedUser: any = {
@@ -81,11 +87,14 @@ export default function Login({ setUser }: LoginProps) {
       setPassword("");
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleFacebookLogin = async () => {
     setError("");
+    setIsLoading(true);
     try {
       facebookProvider.addScope("public_profile");
       const result = await signInWithPopup(auth, facebookProvider);
@@ -112,6 +121,10 @@ export default function Login({ setUser }: LoginProps) {
 
           try {
             const idToken = await result.user.getIdToken(true);
+            
+            // เก็บ token ไว้ใน localStorage พร้อม expiry time
+            setToken(idToken, 24); // 24 hours expiry
+            
             const syncResponse = await postUsersSync(idToken, updatedUser);
 
             if (syncResponse.ok) {
@@ -135,6 +148,8 @@ export default function Login({ setUser }: LoginProps) {
       if (err.code !== "auth/popup-closed-by-user") {
         setError(err.message);
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -155,82 +170,97 @@ export default function Login({ setUser }: LoginProps) {
           {isLoginView ? "เข้าสู่ระบบ" : "สมัครสมาชิก"}
         </h2>
 
+        {/* Loading Spinner */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        )}
+
         {/* ฟอร์มล็อกอิน / สมัครสมาชิก */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <input
-            type="email"
-            placeholder="อีเมล"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-          />
-          <input
-            type="password"
-            placeholder="รหัสผ่าน"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-          />
+        {!isLoading && (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <input
+              type="email"
+              placeholder="อีเมล"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+            />
+            <input
+              type="password"
+              placeholder="รหัสผ่าน"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+            />
 
-          {error && (
-            <div className="text-red-500 text-sm text-center font-medium bg-red-50 dark:bg-red-900/30 p-2 rounded-lg">
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="text-red-500 text-sm text-center font-medium bg-red-50 dark:bg-red-900/30 p-2 rounded-lg">
+                {error}
+              </div>
+            )}
 
-          <button
-            type="submit"
-            className="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-          >
-            {isLoginView ? "เข้าสู่ระบบ" : "สมัครสมาชิก"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              className="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+            >
+              {isLoginView ? "เข้าสู่ระบบ" : "สมัครสมาชิก"}
+            </button>
+          </form>
+        )}
 
         {/* เส้นแบ่ง "หรือ" */}
-        <div className="flex items-center my-6">
-          <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
-          <span className="mx-4 text-sm text-gray-500 dark:text-gray-400 font-medium">
-            หรือ
-          </span>
-          <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
-        </div>
+        {!isLoading && (
+          <div className="flex items-center my-6">
+            <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
+            <span className="mx-4 text-sm text-gray-500 dark:text-gray-400 font-medium">
+              หรือ
+            </span>
+            <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
+          </div>
+        )}
 
         {/* ปุ่ม Social Login */}
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={handleLineLogin}
-            type="button"
-            className="w-full py-3 bg-[#00B900] hover:bg-[#009900] text-white font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex justify-center items-center gap-2"
-          >
-            ดำเนินการต่อด้วย LINE
-          </button>
+        {!isLoading && (
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleLineLogin}
+              type="button"
+              className="w-full py-3 bg-[#00B900] hover:bg-[#009900] text-white font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex justify-center items-center gap-2"
+            >
+              ดำเนินการต่อด้วย LINE
+            </button>
 
-          <button
-            onClick={handleFacebookLogin}
-            type="button"
-            className="w-full py-3 bg-[#1877F2] hover:bg-[#166FE5] text-white font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex justify-center items-center gap-2"
-          >
-            ดำเนินการต่อด้วย Facebook
-          </button>
-        </div>
+            <button
+              onClick={handleFacebookLogin}
+              type="button"
+              className="w-full py-3 bg-[#1877F2] hover:bg-[#166FE5] text-white font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex justify-center items-center gap-2"
+            >
+              ดำเนินการต่อด้วย Facebook
+            </button>
+          </div>
+        )}
 
         {/* สลับหน้าล็อกอิน/สมัครสมาชิก */}
-        <div className="text-center mt-6">
-          <button
-            type="button"
-            onClick={() => {
-              setIsLoginView(!isLoginView);
-              setError("");
-            }}
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium hover:underline transition-colors duration-200"
-          >
-            {isLoginView
-              ? "ยังไม่มีบัญชีใช่ไหม? สมัครเลย"
-              : "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ"}
-          </button>
-        </div>
+        {!isLoading && (
+          <div className="text-center mt-6">
+            <button
+              type="button"
+              onClick={() => {
+                setIsLoginView(!isLoginView);
+                setError("");
+              }}
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium hover:underline transition-colors duration-200"
+            >
+              {isLoginView
+                ? "ยังไม่มีบัญชีใช่ไหม? สมัครเลย"
+                : "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

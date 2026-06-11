@@ -8,7 +8,7 @@ import UserSetting from "../../assets/user-setting.png";
 export interface MenuItem {
   label: string;
   to: string;
-  iconUrl?: string; // 🎯 แก้จุดนี้: เติม ? ไว้หลังชื่อ เพื่อบอกว่าเมนูย่อยไม่จำเป็นต้องใส่รูปไอคอนก็ได้
+  iconUrl?: string;
   roles?: string[];
   submenu?: MenuItem[];
 }
@@ -37,12 +37,22 @@ export const menuConfig: MenuItem[] = [
     submenu: [
       {
         label: "แดชบอร์ดข้อมูล",
-        to: "/admin-dashboard/overview",
+        to: "/settingsData/dashboard",
         roles: ["admin"],
       },
       {
         label: "จัดการผู้ใช้งาน",
-        to: "/admin-dashboard/users",
+        to: "/settingsData/users",
+        roles: ["admin"],
+      },
+      {
+        label: "จัดการเมนู",
+        to: "/settingsData/menu",
+        roles: ["admin"],
+      },
+      {
+        label: "จัดการออเดอร์",
+        to: "/settingsData/orders",
         roles: ["admin"],
       },
     ],

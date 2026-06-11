@@ -11,12 +11,12 @@ import {
   signInWithCustomToken,
 } from "firebase/auth";
 import liff from "@line/liff";
-import AppRoutes from "../../app/routes";
 import "../../style/App.css";
 
 import Header from "./Header";
 import { menuConfig, type MenuItem } from "./menu";
 import { postLineAuth, postUsersSync } from "../../modules/api/api_login";
+import { AppRoutes } from "../../app/routes";
 
 const LIFF_ID = "2010209102-zHsx4M0r";
 
@@ -27,7 +27,7 @@ export default function App() {
   });
 
   const location = useLocation();
-  const isPaymentPage = location.pathname === "/payment"; // หรือ "/payment" ตามที่คุณใช้จริง
+  const isPaymentPage = location.pathname === "/orders/payment";
 
   // 1. ตรวจสอบการโหลดและการเข้าสู่ระบบของ LINE LIFF
   useEffect(() => {

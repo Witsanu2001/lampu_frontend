@@ -3,7 +3,6 @@ import OrderList from "./OrderList";
 import Payment from "./Payment";
 
 export const orderRoutes = () => (
-  // เพิ่ม Fragment (<> ... </>) ครอบ Route ทั้งสองตัว
   <>
     <Route 
       key="order"
