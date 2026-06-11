@@ -1,61 +1,9 @@
 /* eslint-disable react-hooks/purity */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "../../shared/context/CartContext";
 
-const mooKrataMenus = [
-  {
-    id: "1",
-    name: "ชุดหมูจุใจ (S)",
-    price: 299,
-    description: "หมูสามชั้น, สันคอ, หมูหมักนุ่ม พร้อมชุดผักรวมและวุ้นเส้น",
-    image:
-      "https://assets.epicurious.com/photos/5c93ede3e6249a2fe87f23c2/16:9/w_5904,h_3321,c_limit/Grilled-Marinated-Leg-of-Lamb-118032019.jpg",
-  },
-  {
-    id: "2",
-    name: "ชุดเนื้อพรีเมียม (M)",
-    price: 499,
-    description:
-      "เนื้อสไลด์พรีเมียม, น่องลาย, เสือร้องไห้ พร้อมชุดผักรวมขนาดกลาง",
-    image:
-      "https://images.unsplash.com/photo-1603360946369-dc9bb6258143?auto=format&fit=crop&q=80&w=400&h=300",
-  },
-  {
-    id: "3",
-    name: "ชุดครอบครัวหรรษา (L)",
-    price: 699,
-    description: "รวมหมู เนื้อ ทะเล (กุ้ง, ปลาหมึก) พร้อมชุดผักรวมใหญ่จุใจ",
-    image:
-      "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=400&h=300",
-  },
-  {
-    id: "4",
-    name: "ชุดครอบครัวหรรษา (XL)",
-    price: 799,
-    description: "รวมหมู เนื้อ ทะเล (กุ้ง, ปลาหมึก) พร้อมชุดผักรวมใหญ่จุใจ",
-    image:
-      "https://www.seriouseats.com/thmb/DohQC_iADRKgJPdXvcxSjsPA930=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/__opt__aboutcom__coeus__resources__content_migration__serious_eats__seriouseats.com__recipes__images__2016__06__20110516-cowboy-steak-kenji-lopez-alt-bb4a825bd05b4e91b7672bc1603043a8.jpg",
-  },
-  {
-    id: "5",
-    name: "ชุดครอบครัวหรรษา (2XL)",
-    price: 999,
-    description: "รวมหมู เนื้อ ทะเล (กุ้ง, ปลาหมึก) พร้อมชุดผักรวมใหญ่จุใจ",
-    image:
-      "https://nebraskastarbeef.com/wp-content/uploads/2022/09/52913995_m-scaled.jpg",
-  },
-  {
-    id: "6",
-    name: "ชุดครอบครัวหรรษา (3XL)",
-    price: 1299,
-    description: "รวมหมู เนื้อ ทะเล (กุ้ง, ปลาหมึก) พร้อมชุดผักรวมใหญ่จุใจ",
-    image:
-      "https://foodal.com/wp-content/uploads/2015/06/Is-Grilling-the-Healthiest-Cooking-Method.jpg",
-  },
-];
-
-// 🌟 อัปเดต Type ให้เก็บเป้าหมายปลายทาง (targetX, targetY)
+// 🌟 อัปเดต Type ให้ตรงกับข้อมูลที่ใช้และรองรับเป้าหมายปลายทาง (targetX, targetY)
 interface FlyingItem {
   id: number;
   startX: number;
@@ -69,6 +17,47 @@ interface FlyingItem {
 export default function Home() {
   const { addToCart } = useCart();
   const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([]);
+  const [mooKrataMenus, setMooKrataMenus] = useState<any[]>([]); // 🌟 State สำหรับเก็บข้อมูลเมนูจาก API
+  const [isLoading, setIsLoading] = useState(true); // เพิ่ม State ตรวจสอบการโหลดข้อมูล
+
+  // 🌟 1. ดึงข้อมูลเมนูประเภท main จาก API
+  useEffect(() => {
+    const fetchMainMenus = async () => {
+      try {
+        const token = localStorage.getItem("auth_token") || localStorage.getItem("firebase_token") || "";
+        const response = await fetch(
+          "https://api-gateway-879165280409.asia-southeast1.run.app/api/orders/menus_type/main",
+          {
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          }
+        );
+        
+        if (response.ok) {
+          const json = await response.json();
+          // แปลงข้อมูลให้อยู่ในโครงสร้างเดียวกับที่ UI เดิมคาดหวัง
+          const formatted = (json.data || []).map((item: any) => ({
+            id: item.id,
+            name: item.name_menu,
+            price: item.price_menu,
+            description: item.description_menu,
+            image: item.image_url_menu,
+            available: item.available
+          }));
+          
+          // เลือกแสดงผลเฉพาะเมนูที่พร้อมขาย (available === true)
+          setMooKrataMenus(formatted.filter((item: any) => item.available));
+        }
+      } catch (error) {
+        console.error("Error fetching main menus:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMainMenus();
+  }, []);
 
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>, menu: any) => {
     addToCart(menu);
@@ -76,14 +65,11 @@ export default function Home() {
     const buttonRect = e.currentTarget.getBoundingClientRect();
     const cartIcon = document.getElementById("cart-icon");
     
-    // ตั้งค่าเริ่มต้นไว้เผื่อหาตะกร้าไม่เจอ
     let targetX = window.innerWidth - 60;
     let targetY = 20;
 
-    // 🌟 ถ้าหาปุ่มตะกร้าเจอ ให้คำนวณจุดกึ่งกลางของตะกร้า
     if (cartIcon) {
       const cartRect = cartIcon.getBoundingClientRect();
-      // ลบด้วย 32 เพื่อให้กึ่งกลางของรูป (ขนาด 64px) บินไปตรงกลางตะกร้าพอดี
       targetX = cartRect.left + cartRect.width / 2 - 32;
       targetY = cartRect.top + cartRect.height / 2 - 32;
     }
@@ -122,48 +108,62 @@ export default function Home() {
             เมนูหมูกระทะยอดฮิต 🥢
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {mooKrataMenus.map((menu) => (
-              <div
-                key={menu.id}
-                className="bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-gray-100 dark:border-gray-700 flex flex-col"
-              >
-                <div className="h-48 overflow-hidden relative">
-                  <img
-                    src={menu.image}
-                    alt={menu.name}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute top-3 right-3 bg-emerald-500 text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
-                    ฿{menu.price}
+          {isLoading ? (
+            // แสดง Loader ระหว่างรอข้อมูล
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              กำลังโหลดเมนูความอร่อย...
+            </div>
+          ) : mooKrataMenus.length === 0 ? (
+            // แสดงข้อความเมื่อไม่มีข้อมูลเมนูหลักเปิดขายอยู่
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              ขออภัย ขณะนี้ยังไม่มีเมนูหลักเปิดให้บริการ
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {mooKrataMenus.map((menu) => (
+                <div
+                  key={menu.id}
+                  className="bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-gray-100 dark:border-gray-700 flex flex-col"
+                >
+                  <div className="h-48 overflow-hidden relative">
+                    <img
+                      src={menu.image}
+                      alt={menu.name}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute top-3 right-3 bg-emerald-500 text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
+                      ฿{menu.price}
+                    </div>
+                  </div>
+
+                  <div className="p-5 flex flex-col flex-grow">
+                    <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">
+                      {menu.name}
+                    </h3>
+                    <div className="h-16 mb-4 overflow-hidden">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">
+                        {menu.description || "ไม่มีรายละเอียดเมนู"}
+                      </p>
+                    </div>
+
+                    <button 
+                      onClick={(e) => handleAddToCart(e, menu)}
+                      className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-semibold rounded-lg shadow-sm transition-all duration-200 flex items-center justify-center gap-2 mt-auto"
+                    >
+                      <span>สั่งชุดนี้</span>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
-
-                <div className="p-5 flex flex-col flex-grow">
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">
-                    {menu.name}
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 flex-grow line-clamp-3">
-                    {menu.description}
-                  </p>
-
-                  <button 
-                    onClick={(e) => handleAddToCart(e, menu)}
-                    className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-semibold rounded-lg shadow-sm transition-all duration-200 flex items-center justify-center gap-2 mt-auto"
-                  >
-                    <span>สั่งชุดนี้</span>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* 🌟 แสดงรูปภาพที่กำลังลอยเข้าตะกร้า โดยใช้ targetX และ targetY */}
+      {/* 🌟 แสดงรูปภาพที่กำลังลอยเข้าตะกร้า */}
       {flyingItems.map((item) => (
         <img
           key={item.id}

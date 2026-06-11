@@ -3,28 +3,45 @@ import Dashboard from "./dashboards/Dashboard";
 import UserSetting from "./users/ีUserSetting";
 import MenuSetting from "./menu/MenuSetting";
 import OrderSetting from "./orders/OrderSetting";
+import { ProtectedRoute } from "../../shared/middlewares/ProtectedRoute";
 
 export const settingsDataRoutes = () => (
   <>
     <Route 
       key="dashboard"
       path="/settingsData/dashboards" 
-      element={<Dashboard />}
+      element={
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      }
     />  
     <Route 
       key="users"
       path="/settingsData/users" 
-      element={<UserSetting />}
+      element={
+        <ProtectedRoute>
+          <UserSetting />
+        </ProtectedRoute>
+      }
     />
     <Route 
       key="menu"
       path="/settingsData/menu" 
-      element={<MenuSetting />}
+      element={
+        <ProtectedRoute>
+          <MenuSetting />
+        </ProtectedRoute>
+      }
     />
     <Route 
       key="orders"
       path="/settingsData/orders" 
-      element={<OrderSetting />}
+      element={
+        <ProtectedRoute>
+          <OrderSetting />
+        </ProtectedRoute>
+      }
     />
   </>
 );

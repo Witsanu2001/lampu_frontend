@@ -5,48 +5,14 @@ import { useState, useEffect } from "react";
 import { useCart } from "../../shared/context/CartContext";
 import { useNavigate } from "react-router-dom";
 
-const addOnMenus = [
-  {
-    id: "addon-1",
-    name: "น้ำโค้ก 1.25L",
-    price: 35,
-    image:
-      "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&q=80&w=200&h=200",
-  },
-  {
-    id: "addon-2",
-    name: "ยำสาหร่าย",
-    price: 49,
-    image:
-      "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&q=80&w=200&h=200",
-  },
-  {
-    id: "addon-3",
-    name: "น้ำจิ้มสุกี้",
-    price: 25,
-    image:
-      "https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&q=80&w=200&h=200",
-  },
-  {
-    id: "addon-4",
-    name: "ชุดผักรวม",
-    price: 39,
-    image:
-      "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&q=80&w=200&h=200",
-  },
-  {
-    id: "addon-5",
-    name: "ลูกชิ้นรวมมิตร",
-    price: 49,
-    image:
-      "https://images.unsplash.com/photo-1527004013197-933c4bcc61f4?auto=format&fit=crop&q=80&w=200&h=200",
-  },
-];
-
 export default function Payment() {
   const navigate = useNavigate();
-  const { cart, cartTotal, clearCart, updateQuantity, removeFromCart } =
-    useCart();
+  const { cart, cartTotal, clearCart, updateQuantity, removeFromCart } = useCart();
+  
+  // 🌟 เพิ่ม State สำหรับเก็บข้อมูลเมนูเพิ่มเติมจาก API
+  const [addOnMenus, setAddOnMenus] = useState<any[]>([]);
+  const [isLoadingAddOns, setIsLoadingAddOns] = useState(true);
+
   const [selectedAddOns, setSelectedAddOns] = useState<any[]>([]);
   const [shippingAddress, setShippingAddress] = useState<any>(null);
 
@@ -57,12 +23,49 @@ export default function Payment() {
   const [panCount, setPanCount] = useState(1);
   const [charcoalCount, setCharcoalCount] = useState(0);
 
-  // 🌟 แก้ไขการดึงข้อมูลจาก LocalStorage ให้ตรงกับ userAddresses
+  // 🌟 ดึงข้อมูลเมนูเพิ่มเติม (Additional) จาก API
+  useEffect(() => {
+    const fetchAddOnMenus = async () => {
+      try {
+        const token = localStorage.getItem("auth_token") || localStorage.getItem("firebase_token") || "";
+        const response = await fetch(
+          "https://api-gateway-879165280409.asia-southeast1.run.app/api/orders/menus_type/additional",
+          {
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          }
+        );
+        
+        if (response.ok) {
+          const json = await response.json();
+          // แปลงข้อมูลให้อยู่ในโครงสร้างเดียวกับ UI เดิม
+          const formatted = (json.data || []).map((item: any) => ({
+            id: item.id,
+            name: item.name_menu,
+            price: item.price_menu,
+            image: item.image_url_menu,
+            available: item.available
+          }));
+          
+          // เลือกแสดงผลเฉพาะเมนูที่พร้อมขาย (available === true)
+          setAddOnMenus(formatted.filter((item: any) => item.available));
+        }
+      } catch (error) {
+        console.error("Error fetching add-on menus:", error);
+      } finally {
+        setIsLoadingAddOns(false);
+      }
+    };
+
+    fetchAddOnMenus();
+  }, []);
+
+  // ดึงข้อมูลที่อยู่จาก LocalStorage
   useEffect(() => {
     const savedAddress = localStorage.getItem("userAddresses");
     if (savedAddress) {
       const parsedAddress = JSON.parse(savedAddress);
-      // เช็คว่าถ้าเป็น Array ให้ดึงที่อยู่แรกมาใช้ (คุณสามารถแก้ logic ดึงอันที่ Default ได้ที่นี่)
       if (Array.isArray(parsedAddress) && parsedAddress.length > 0) {
         setShippingAddress(parsedAddress[0]);
       } else {
@@ -98,6 +101,8 @@ export default function Payment() {
 
   const [paymentMethod, setPaymentMethod] = useState("");
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
+  const [slipFile, setSlipFile] = useState<File | null>(null);
+  const [homeImageFile, setHomeImageFile] = useState<File | null>(null);
 
   const MOCK_QR_URL =
     "https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg";
@@ -124,6 +129,14 @@ export default function Payment() {
     if (file) {
       const previewUrl = URL.createObjectURL(file);
       setSlipPreview(previewUrl);
+      setSlipFile(file);
+    }
+  };
+
+  const handleHomeImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setHomeImageFile(file);
     }
   };
 
@@ -151,7 +164,6 @@ export default function Payment() {
     });
   };
 
-  // 🌟 ดึงค่าจากตัวแปร deliveryFee (เพิ่ม fallback เป็น fee เผื่อไว้ด้วย)
   const deliveryFeePerSet = shippingAddress?.deliveryFee || shippingAddress?.fee || 0;
   const shippingFee = mainItemsCount * deliveryFeePerSet;
 
@@ -160,7 +172,6 @@ export default function Payment() {
     0,
   );
 
-  // คำนวณส่วนเกิน
   const extraStoves = Math.max(0, stoveCount - mainItemsCount);
   const extraPans = Math.max(0, panCount - mainItemsCount);
   const stoveFee = extraStoves * 30;
@@ -170,17 +181,16 @@ export default function Payment() {
   const grandTotal =
     cartTotal + shippingFee + addOnTotal + charcoalFee + stoveFee + panFee;
 
-  const handleConfirmPayment = () => {
+  const handleConfirmPayment = async () => {
     if (!shippingAddress) {
       alert("กรุณาเพิ่มที่อยู่จัดส่งก่อนยืนยันคำสั่งซื้อครับ/ค่ะ 📍");
       return;
     }
-    if (paymentMethod === "promptpay" && !slipPreview) {
+    if (paymentMethod === "promptpay" && !slipFile) {
       alert("กรุณาอัปโหลดสลิปหลักฐานการโอนเงินก่อนยืนยันคำสั่งซื้อครับ/ค่ะ");
       return;
     }
 
-    // บันทึกรายการทั้งหมดลงใน log (ไม่รวมรูปภาพ)
     const orderData = {
       mainItems: cart.map((item) => ({
         id: item.id,
@@ -214,7 +224,7 @@ export default function Payment() {
       },
       payment: {
         method: paymentMethod,
-        hasSlip: !!slipPreview,
+        hasSlip: !!slipFile,
       },
       totals: {
         cartTotal,
@@ -224,17 +234,49 @@ export default function Payment() {
       },
     };
 
-    console.log("=== รายการสั่งซื้อทั้งหมด ===");
-    console.log(JSON.stringify(orderData, null, 2));
+    try {
+      const formData = new FormData();
+      formData.append("order", JSON.stringify(orderData));
 
-    clearCart();
-    setSelectedAddOns([]);
-    setStoveCount(1);
-    setPanCount(1);
-    setCharcoalCount(0);
-    setSlipPreview(null);
-    alert("ยืนยันการสั่งซื้อสำเร็จ! ขอบคุณที่ใช้บริการครับ/ค่ะ 🥢");
-    navigate("/");
+      if (paymentMethod === "promptpay" && slipFile) {
+        formData.append("slip", slipFile);
+      }
+
+      if (homeImageFile) {
+        formData.append("home_image", homeImageFile);
+      }
+
+      const token = localStorage.getItem("auth_token") || localStorage.getItem("firebase_token") || "";
+      const response = await fetch(
+        "https://api-gateway-879165280409.asia-southeast1.run.app/api/orders/orders_add",
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (response.ok) {
+        clearCart();
+        setSelectedAddOns([]);
+        setStoveCount(1);
+        setPanCount(1);
+        setCharcoalCount(0);
+        setSlipPreview(null);
+        setSlipFile(null);
+        setHomeImageFile(null);
+        alert("ยืนยันการสั่งซื้อสำเร็จ! ขอบคุณที่ใช้บริการครับ/ค่ะ 🥢");
+        navigate("/");
+      } else {
+        const errorData = await response.json();
+        alert(`เกิดข้อผิดพลาด: ${errorData.error || "ไม่สามารถส่งคำสั่งซื้อได้"}`);
+      }
+    } catch (error) {
+      console.error("Error submitting order:", error);
+      alert("เกิดข้อผิดพลาดในการส่งคำสั่งซื้อ กรุณาลองใหม่ครับ/ค่ะ");
+    }
   };
 
   return (
@@ -247,18 +289,8 @@ export default function Payment() {
             className="flex items-center justify-center w-10 h-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300"
             aria-label="กลับไปหน้าหลัก"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-white m-0">
@@ -295,18 +327,8 @@ export default function Payment() {
                   </p>
                   {shippingAddress.location && (
                     <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-3 flex items-center gap-1">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                       พิกัด: {shippingAddress.location.lat.toFixed(5)},{" "}
                       {shippingAddress.location.lng.toFixed(5)}
@@ -326,6 +348,47 @@ export default function Payment() {
                   </button>
                 </div>
               )}
+
+              {/* Home Image Upload */}
+              <div className="mt-4">
+                <label className="block text-sm font-semibold text-gray-800 dark:text-white mb-2">
+                  อัปโหลดรูปบ้าน (ถ้ามี) 📷
+                </label>
+                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-500 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">
+                  <div className="flex flex-col items-center justify-center pt-2 pb-3">
+                    <svg className="w-6 h-6 mb-1 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                      กดเพื่อเลือกรูปบ้าน (ถ้ามี)
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleHomeImageUpload}
+                  />
+                </label>
+
+                {homeImageFile && (
+                  <div className="mt-2 relative">
+                    <img
+                      src={URL.createObjectURL(homeImageFile)}
+                      alt="Home Image Preview"
+                      className="w-full max-h-32 object-contain rounded-lg border border-gray-300 dark:border-gray-600"
+                    />
+                    <button
+                      onClick={() => setHomeImageFile(null)}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 2. สรุปชุดหลัก */}
@@ -384,66 +447,77 @@ export default function Payment() {
               </div>
             </div>
 
-            {/* 3. การ์ดเลือกเมนูเพิ่มเติม */}
+            {/* 3. การ์ดเลือกเมนูเพิ่มเติม (แก้ไขเชื่อม API แล้ว) */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
                 รับเพิ่มไหมครับ/คะ? 😋
               </h2>
-              <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
-                {addOnMenus.map((addon) => {
-                  const selectedAddOn = selectedAddOns.find(
-                    (item) => item.id === addon.id,
-                  );
-                  return (
-                    <div
-                      key={addon.id}
-                      className="flex-none w-36 bg-gray-50 dark:bg-gray-700/40 rounded-xl p-3 snap-start border border-gray-100 dark:border-gray-700 flex flex-col"
-                    >
-                      <img
-                        src={addon.image}
-                        alt={addon.name}
-                        className="w-full h-24 object-cover rounded-lg mb-3"
-                      />
-                      <h3 className="font-semibold text-sm text-gray-800 dark:text-white truncate mb-1">
-                        {addon.name}
-                      </h3>
-                      <p className="text-emerald-500 font-bold text-sm mb-3">
-                        ฿{addon.price}
-                      </p>
-                      {selectedAddOn ? (
-                        <div className="flex items-center justify-between w-full mt-auto bg-emerald-100 dark:bg-gray-600 rounded-lg p-1 px-2">
+              
+              {isLoadingAddOns ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  กำลังโหลดเมนูเพิ่มเติม...
+                </div>
+              ) : addOnMenus.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  ไม่มีเมนูเพิ่มเติมในขณะนี้
+                </div>
+              ) : (
+                <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
+                  {addOnMenus.map((addon) => {
+                    const selectedAddOn = selectedAddOns.find(
+                      (item) => item.id === addon.id,
+                    );
+                    return (
+                      <div
+                        key={addon.id}
+                        className="flex-none w-36 bg-gray-50 dark:bg-gray-700/40 rounded-xl p-3 snap-start border border-gray-100 dark:border-gray-700 flex flex-col"
+                      >
+                        <img
+                          src={addon.image}
+                          alt={addon.name}
+                          className="w-full h-24 object-cover rounded-lg mb-3"
+                        />
+                        <h3 className="font-semibold text-sm text-gray-800 dark:text-white truncate mb-1">
+                          {addon.name}
+                        </h3>
+                        <p className="text-emerald-500 font-bold text-sm mb-3">
+                          ฿{addon.price}
+                        </p>
+                        {selectedAddOn ? (
+                          <div className="flex items-center justify-between w-full mt-auto bg-emerald-100 dark:bg-gray-600 rounded-lg p-1 px-2">
+                            <button
+                              onClick={() =>
+                                handleUpdateAddOnQuantity(addon.id, -1)
+                              }
+                              className="w-6 h-6 flex items-center justify-center bg-white dark:bg-gray-500 rounded text-emerald-600 dark:text-white font-bold shadow-sm hover:scale-105 transition-transform"
+                            >
+                              -
+                            </button>
+                            <span className="text-sm font-bold text-emerald-600 dark:text-white">
+                              {selectedAddOn.quantity}
+                            </span>
+                            <button
+                              onClick={() =>
+                                handleUpdateAddOnQuantity(addon.id, 1)
+                              }
+                              className="w-6 h-6 flex items-center justify-center bg-emerald-500 rounded text-white font-bold shadow-sm hover:scale-105 transition-transform"
+                            >
+                              +
+                            </button>
+                          </div>
+                        ) : (
                           <button
-                            onClick={() =>
-                              handleUpdateAddOnQuantity(addon.id, -1)
-                            }
-                            className="w-6 h-6 flex items-center justify-center bg-white dark:bg-gray-500 rounded text-emerald-600 dark:text-white font-bold shadow-sm hover:scale-105 transition-transform"
+                            onClick={() => handleAddAddOn(addon)}
+                            className="w-full mt-auto py-1.5 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-medium text-xs rounded-lg transition-colors"
                           >
-                            -
+                            + เพิ่มรายการ
                           </button>
-                          <span className="text-sm font-bold text-emerald-600 dark:text-white">
-                            {selectedAddOn.quantity}
-                          </span>
-                          <button
-                            onClick={() =>
-                              handleUpdateAddOnQuantity(addon.id, 1)
-                            }
-                            className="w-6 h-6 flex items-center justify-center bg-emerald-500 rounded text-white font-bold shadow-sm hover:scale-105 transition-transform"
-                          >
-                            +
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleAddAddOn(addon)}
-                          className="w-full mt-auto py-1.5 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-medium text-xs rounded-lg transition-colors"
-                        >
-                          + เพิ่มรายการ
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* 4. สรุปเมนูเพิ่มเติม (ถ้ามี) */}
@@ -735,18 +809,8 @@ export default function Payment() {
                       onClick={handleDownloadQR}
                       className="mb-6 flex items-center justify-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg text-sm font-semibold transition-colors"
                     >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                        />
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
                       บันทึก QR Code
                     </button>
@@ -757,18 +821,8 @@ export default function Payment() {
                       </label>
                       <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-500 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <svg
-                            className="w-8 h-8 mb-2 text-gray-500 dark:text-gray-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                            />
+                          <svg className="w-8 h-8 mb-2 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                           <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
                             กดเพื่อเลือกรูปภาพ หรือ ถ่ายรูปสลิป
@@ -793,18 +847,8 @@ export default function Payment() {
                             onClick={() => setSlipPreview(null)}
                             className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600"
                           >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
                         </div>

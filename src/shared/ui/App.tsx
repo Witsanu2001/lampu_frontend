@@ -17,6 +17,7 @@ import Header from "./Header";
 import { menuConfig, type MenuItem } from "./menu";
 import { postLineAuth, postUsersSync } from "../../modules/api/api_login";
 import { AppRoutes } from "../../app/routes";
+import { setToken, removeToken } from "../infra/auth/token";
 
 const LIFF_ID = "2010209102-zHsx4M0r";
 
@@ -98,7 +99,10 @@ export default function App() {
         };
 
         const firebaseToken = await userCredential.user.getIdToken(true);
-        
+
+        // เก็บ token ไว้ใน localStorage พร้อม expiry time
+        setToken(firebaseToken, 24); // 24 hours expiry
+
         // เรียกใช้งานฟังก์ชันแยกตัวเดิม
         const syncRes = await postUsersSync(firebaseToken, lineUser);
 
@@ -108,7 +112,7 @@ export default function App() {
 
           lineUser = {
             ...lineUser,
-            role: syncedUser?.role || "user", 
+            role: syncedUser?.role || "user",
           };
           console.log("✅ ล็อกอิน LINE + บันทึกสิทธิ์สำเร็จ! Role:", lineUser.role);
         }
@@ -128,7 +132,7 @@ export default function App() {
 
   // 2. ติดตามสถานะ Firebase (Email / Facebook)
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         // 🎯 ดึงข้อมูลเดิมในคลังมาตรวจสอบก่อนเพื่อรักษาค่า role ปัจจุบันไว้
         const savedUserStr = localStorage.getItem("userData");
@@ -153,12 +157,18 @@ export default function App() {
           provider: "firebase",
           role: existingRole, // 🎯 นำค่าสิทธิ์เดิมกลับมาใส่ ห้ามปล่อยเป็นค่าว่าง
         };
+
+        // เก็บ token ไว้ใน localStorage พร้อม expiry time
+        const idToken = await currentUser.getIdToken(true);
+        setToken(idToken, 24); // 24 hours expiry
+
         setUser(userDataToSave);
         localStorage.setItem("userData", JSON.stringify(userDataToSave));
       } else {
         setUser((prevUser: any) => {
           if (prevUser?.provider === "line") return prevUser;
           localStorage.removeItem("userData");
+          removeToken(); // ลบ token เมื่อ logout
           return null;
         });
       }

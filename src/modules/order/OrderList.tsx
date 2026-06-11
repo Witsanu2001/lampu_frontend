@@ -1,5 +1,9 @@
 ﻿// src/modules/order/Order.tsx
 
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { getAllOrders, type Order } from "../api/api_order";
+
 type OrderStatus =
   | "new"
   | "pending"
@@ -7,105 +11,6 @@ type OrderStatus =
   | "ready"
   | "shipping"
   | "delivered";
-
-interface Order {
-  id: string;
-  orderNumber: string;
-  status: OrderStatus;
-  date: string;
-  items: {
-    name: string;
-    quantity: number;
-    price: number;
-  }[];
-  total: number;
-  customerName: string;
-  address: string;
-}
-
-const mockOrders: Order[] = [
-  {
-    id: "1",
-    orderNumber: "ORD-001",
-    status: "new",
-    date: "10/06/2026 14:30",
-    items: [
-      { name: "หมูกระทะเซ็ต A", quantity: 2, price: 350 },
-      { name: "ผักสดเซ็ต", quantity: 1, price: 80 },
-      { name: "น้ำจิ้มรสเด็ด", quantity: 2, price: 40 },
-    ],
-    total: 810,
-    customerName: "สมชาย ใจดี",
-    address: "123 ถ.สุขุมวิท แขวงคลองตัน เขตคลองเตย กรุงเทพฯ",
-  },
-  {
-    id: "2",
-    orderNumber: "ORD-002",
-    status: "pending",
-    date: "10/06/2026 13:45",
-    items: [
-      { name: "หมูกระทะเซ็ต B", quantity: 1, price: 450 },
-      { name: "ไข่ไก่", quantity: 6, price: 30 },
-    ],
-    total: 630,
-    customerName: "วิภา สุขใจ",
-    address: "456 ถ.พระราม 4 แขวงมักกะสัน เขตราชเทวี กรุงเทพฯ",
-  },
-  {
-    id: "3",
-    orderNumber: "ORD-003",
-    status: "preparing",
-    date: "10/06/2026 12:20",
-    items: [
-      { name: "หมูกระทะเซ็ต A", quantity: 1, price: 350 },
-      { name: "หมูสับ", quantity: 2, price: 120 },
-      { name: "เกาเหลาหมู", quantity: 1, price: 90 },
-    ],
-    total: 680,
-    customerName: "นาย รักเรียน",
-    address: "789 ถ.สีลม แขวงสีลม เขตบางรัก กรุงเทพฯ",
-  },
-  {
-    id: "4",
-    orderNumber: "ORD-004",
-    status: "ready",
-    date: "10/06/2026 11:00",
-    items: [
-      { name: "หมูกระทะเซ็ต C", quantity: 1, price: 550 },
-      { name: "ผักสดเซ็ต", quantity: 2, price: 80 },
-      { name: "น้ำจิ้มรสเด็ด", quantity: 1, price: 40 },
-    ],
-    total: 750,
-    customerName: "สมหญิง มีสุข",
-    address: "321 ถ.เพชรบุรี แขวงมักกะสัน เขตราชเทวี กรุงเทพฯ",
-  },
-  {
-    id: "5",
-    orderNumber: "ORD-005",
-    status: "shipping",
-    date: "10/06/2026 10:30",
-    items: [
-      { name: "หมูกระทะเซ็ต A", quantity: 3, price: 350 },
-      { name: "เกาเหลาหมู", quantity: 2, price: 90 },
-    ],
-    total: 1230,
-    customerName: "ประยุทธ์ จริงใจ",
-    address: "654 ถ.อโศก แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ",
-  },
-  {
-    id: "6",
-    orderNumber: "ORD-006",
-    status: "delivered",
-    date: "09/06/2026 19:45",
-    items: [
-      { name: "หมูกระทะเซ็ต B", quantity: 1, price: 450 },
-      { name: "ผักสดเซ็ต", quantity: 1, price: 80 },
-    ],
-    total: 530,
-    customerName: "มานี รักษ์ดี",
-    address: "987 ถ.สุขุมวิท แขวงพระโขงง เขตเขตพระโขงง กรุงเทพฯ",
-  },
-];
 
 const getStatusConfig = (status: OrderStatus) => {
   const configs = {
@@ -150,25 +55,82 @@ const getStatusConfig = (status: OrderStatus) => {
 };
 
 export default function OrderList() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const data = await getAllOrders();
+        setOrders(data);
+      } catch (err) {
+        setError("Failed to load orders");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("th-TH", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const handleOrderClick = (orderId: string) => {
+    navigate(`/orders/${orderId}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="h-full p-6 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+        <div className="flex items-center justify-center h-full">
+          <p className="text-gray-500">กำลังโหลด...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-full p-6 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+        <div className="flex items-center justify-center h-full">
+          <p className="text-red-500">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full p-6 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100">
       <div className="border-gray-200 dark:border-gray-700 z-10">
         <h1 className="text-xl font-bold mb-3">รายการออเดอร์หมูกระทะ</h1>
       </div>
       <div className="space-y-3">
-        {mockOrders.map((order) => {
-            const statusConfig = getStatusConfig(order.status);
+        {orders.map((order) => {
+            const statusConfig = getStatusConfig(order.payment.method === "promptpay" ? "pending" : "new");
             return (
               <div
                 key={order.id}
-                className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm overflow-hidden"
+                onClick={() => handleOrderClick(order.id)}
+                className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
               >
                 {/* Order Header */}
                 <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-600 flex justify-between items-start">
                   <div>
-                    <p className="font-semibold text-sm">{order.orderNumber}</p>
+                    <p className="font-semibold text-sm">{order.id.substring(0, 8).toUpperCase()}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {order.date}
+                      {formatDate(order.created_at)}
                     </p>
                   </div>
                   <span
@@ -181,16 +143,31 @@ export default function OrderList() {
                 {/* Order Items */}
                 <div className="px-4 py-3">
                   <div className="space-y-2">
-                    {order.items.map((item, index) => (
+                    {order.mainItems.map((item, index) => (
                       <div key={index} className="flex justify-between text-sm">
                         <span className="text-gray-600 dark:text-gray-300">
                           {item.name} x{item.quantity}
                         </span>
                         <span className="font-medium">
-                          ฿{(item.price * item.quantity).toLocaleString()}
+                          ฿{item.subtotal.toLocaleString()}
                         </span>
                       </div>
                     ))}
+                    {order.addOnItems.length > 0 && (
+                      <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">เพิ่มเติม:</p>
+                        {order.addOnItems.map((item, index) => (
+                          <div key={index} className="flex justify-between text-sm">
+                            <span className="text-gray-600 dark:text-gray-300">
+                              {item.name} x{item.quantity}
+                            </span>
+                            <span className="font-medium">
+                              ฿{item.subtotal.toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -198,16 +175,16 @@ export default function OrderList() {
                 <div className="px-4 py-3 bg-gray-50 dark:bg-gray-600 border-t border-gray-200 dark:border-gray-600">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      ลูกค้า:
+                      ที่อยู่:
                     </span>
-                    <span className="text-sm font-medium">
-                      {order.customerName}
+                    <span className="text-sm font-medium truncate max-w-[200px]">
+                      {order.shipping.address}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-bold">ยอดรวม:</span>
                     <span className="text-lg font-bold text-orange-600 dark:text-orange-400">
-                      ฿{order.total.toLocaleString()}
+                      ฿{order.totals.grandTotal.toLocaleString()}
                     </span>
                   </div>
                 </div>

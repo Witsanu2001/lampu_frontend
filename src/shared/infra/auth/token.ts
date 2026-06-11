@@ -28,7 +28,19 @@ export const removeToken = (): void => {
 
 export const isAuthenticated = (): boolean => {
   const token = getToken()
-  if (!token) return false
+  if (!token) {
+    // Check if userData exists (for LINE/Firebase auth)
+    const userData = localStorage.getItem('userData')
+    if (userData) {
+      try {
+        const parsed = JSON.parse(userData)
+        return !!parsed.uid
+      } catch (e) {
+        return false
+      }
+    }
+    return false
+  }
   if (isTokenExpired()) {
     removeToken()
     return false
