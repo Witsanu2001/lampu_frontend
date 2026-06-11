@@ -5,8 +5,8 @@ import Map, { Source, Layer } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 // 📍 1. ตั้งค่าคงที่ของร้าน (พิกัดร้านถ้ำพรรณรา)
-const SHOP_LAT = 8.301677;
-const SHOP_LNG = 99.365736;
+const SHOP_LAT = 8.300893140259126;
+const SHOP_LNG = 99.36760271084832;
 const FREE_RADIUS_KM = 1.8;
 
 // 🧮 2. ฟังก์ชันคณิตศาสตร์คำนวณระยะทางเส้นตรงจากพิกัด (Haversine Formula)

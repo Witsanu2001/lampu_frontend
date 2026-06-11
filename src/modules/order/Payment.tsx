@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 export default function Payment() {
   const navigate = useNavigate();
   const { cart, cartTotal, clearCart, updateQuantity, removeFromCart } = useCart();
-  
+
   // 🌟 เพิ่ม State สำหรับเก็บข้อมูลเมนูเพิ่มเติมจาก API
   const [addOnMenus, setAddOnMenus] = useState<any[]>([]);
   const [isLoadingAddOns, setIsLoadingAddOns] = useState(true);
@@ -36,7 +36,7 @@ export default function Payment() {
             }
           }
         );
-        
+
         if (response.ok) {
           const json = await response.json();
           // แปลงข้อมูลให้อยู่ในโครงสร้างเดียวกับ UI เดิม
@@ -47,7 +47,7 @@ export default function Payment() {
             image: item.image_url_menu,
             available: item.available
           }));
-          
+
           // เลือกแสดงผลเฉพาะเมนูที่พร้อมขาย (available === true)
           setAddOnMenus(formatted.filter((item: any) => item.available));
         }
@@ -191,6 +191,22 @@ export default function Payment() {
       return;
     }
 
+    // 1. ดึงข้อมูล User จาก localStorage เพื่อเอา user_id
+    const userDataString = localStorage.getItem("userData");
+    let userId = "";
+    if (userDataString) {
+      const userData = JSON.parse(userDataString);
+      // เปลี่ยน .id หรือ .uid ตามโครงสร้างข้อมูลใน userData ของคุณนะครับ
+      userId = userData.id || userData.uid || "";
+    }
+
+    // 2. ถ้าไม่มี userId (อาจจะหลุดล็อกอิน) ให้หยุดการทำงานและแจ้งเตือน
+    if (!userId) {
+      alert("ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่อีกครั้งครับ");
+      // อาจจะ navigate("/login") ตรงนี้ด้วยก็ได้ครับ
+      return;
+    }
+
     const orderData = {
       mainItems: cart.map((item) => ({
         id: item.id,
@@ -237,6 +253,9 @@ export default function Payment() {
     try {
       const formData = new FormData();
       formData.append("order", JSON.stringify(orderData));
+
+      // ✨ 3. แนบ user_id เข้าไปใน FormData ตรงนี้เลยครับ
+      formData.append("user_id", userId);
 
       if (paymentMethod === "promptpay" && slipFile) {
         formData.append("slip", slipFile);
@@ -452,7 +471,7 @@ export default function Payment() {
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
                 รับเพิ่มไหมครับ/คะ? 😋
               </h2>
-              
+
               {isLoadingAddOns ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   กำลังโหลดเมนูเพิ่มเติม...

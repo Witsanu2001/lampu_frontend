@@ -6,6 +6,7 @@ import { auth } from "../../modules/const/firebase";
 import liff from "@line/liff";
 import { useCart } from "../context/CartContext";
 import CartModal from "../components/CartModal";
+import { useNavigate } from "react-router-dom";
 
 interface HeaderProps {
   user: any;
@@ -17,7 +18,8 @@ export default function Header({ user, setUser }: HeaderProps) {
   const { cartCount } = useCart();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isBouncing, setIsBouncing] = useState(false);
-
+  const navigate = useNavigate();
+  
   const LOGO_URL =
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSFvdyWq2xH0rP3uHBFHY6WP5tKMUx74VJ8g&s";
 
@@ -59,6 +61,7 @@ export default function Header({ user, setUser }: HeaderProps) {
     await signOut(auth);
     setUser(null);
     localStorage.removeItem("userData");
+    navigate("/login");
   };
 
   return (

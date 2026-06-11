@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAllOrders, type Order } from "../api/api_order";
+import { getAllOrders } from "../api/api_order";
+import type { Order } from "../const/order";
 
 type OrderStatus =
   | "new"
@@ -51,7 +52,8 @@ const getStatusConfig = (status: OrderStatus) => {
       borderColor: "border-green-300 dark:border-green-700",
     },
   };
-  return configs[status];
+  // เผื่อกรณีที่ status ส่งมาผิดปกติ ให้ fallback กลับไปที่ "new"
+  return configs[status] || configs["new"];
 };
 
 export default function OrderList() {
@@ -64,7 +66,7 @@ export default function OrderList() {
     const fetchOrders = async () => {
       try {
         const data = await getAllOrders();
-        setOrders(data);
+        setOrders(Array.isArray(data) ? data : []);
       } catch (err) {
         setError("Failed to load orders");
         console.error(err);
@@ -118,7 +120,9 @@ export default function OrderList() {
       </div>
       <div className="space-y-3">
         {orders.map((order) => {
-            const statusConfig = getStatusConfig(order.payment.method === "promptpay" ? "pending" : "new");
+            // ✨ นำ order.status มาใช้งานโดยตรง และแปลง type ให้ถูกต้อง
+            const statusConfig = getStatusConfig((order.status as OrderStatus) || "new");
+            
             return (
               <div
                 key={order.id}
@@ -128,7 +132,7 @@ export default function OrderList() {
                 {/* Order Header */}
                 <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-600 flex justify-between items-start">
                   <div>
-                    <p className="font-semibold text-sm">{order.id.substring(0, 8).toUpperCase()}</p>
+                    <p className="font-semibold text-sm">{order.id}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                       {formatDate(order.created_at)}
                     </p>
@@ -143,17 +147,17 @@ export default function OrderList() {
                 {/* Order Items */}
                 <div className="px-4 py-3">
                   <div className="space-y-2">
-                    {order.mainItems.map((item, index) => (
+                    {order.mainItems?.map((item, index) => (
                       <div key={index} className="flex justify-between text-sm">
                         <span className="text-gray-600 dark:text-gray-300">
                           {item.name} x{item.quantity}
                         </span>
                         <span className="font-medium">
-                          ฿{item.subtotal.toLocaleString()}
+                          ฿{item.subtotal?.toLocaleString()}
                         </span>
                       </div>
                     ))}
-                    {order.addOnItems.length > 0 && (
+                    {order.addOnItems?.length > 0 && (
                       <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
                         <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">เพิ่มเติม:</p>
                         {order.addOnItems.map((item, index) => (
@@ -162,7 +166,7 @@ export default function OrderList() {
                               {item.name} x{item.quantity}
                             </span>
                             <span className="font-medium">
-                              ฿{item.subtotal.toLocaleString()}
+                              ฿{item.subtotal?.toLocaleString()}
                             </span>
                           </div>
                         ))}
@@ -178,13 +182,13 @@ export default function OrderList() {
                       ที่อยู่:
                     </span>
                     <span className="text-sm font-medium truncate max-w-[200px]">
-                      {order.shipping.address}
+                      {order.shipping?.address}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-bold">ยอดรวม:</span>
                     <span className="text-lg font-bold text-orange-600 dark:text-orange-400">
-                      ฿{order.totals.grandTotal.toLocaleString()}
+                      ฿{order.totals?.grandTotal?.toLocaleString()}
                     </span>
                   </div>
                 </div>

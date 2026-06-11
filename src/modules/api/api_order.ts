@@ -1,97 +1,83 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { Order } from "../const/order";
+
 const apiUrl = import.meta.env.VITE_API_URL;
 
-export interface Order {
-  id: string;
-  mainItems: Item[];
-  addOnItems: Item[];
-  equipment: Equipment;
-  shipping: Shipping;
-  payment: Payment;
-  totals: Totals;
-  slip_url: string;
-  home_image_url: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Item {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  subtotal: number;
-}
-
-export interface Equipment {
-  stoveCount: number;
-  panCount: number;
-  charcoalCount: number;
-  extraStoves: number;
-  extraPans: number;
-  stoveFee: number;
-  panFee: number;
-  charcoalFee: number;
-}
-
-export interface Location {
-  lat: number;
-  lng: number;
-}
-
-export interface Shipping {
-  address: string;
-  location: Location;
-  feePerSet: number;
-  totalFee: number;
-}
-
-export interface Payment {
-  method: string;
-  hasSlip: boolean;
-}
-
-export interface Totals {
-  cartTotal: number;
-  addOnTotal: number;
-  shippingFee: number;
-  grandTotal: number;
-}
-
 export async function getAllOrders(): Promise<Order[]> {
+  // ✨ ย้ายการดึง Token เข้ามาไว้ในฟังก์ชัน เพื่อให้ได้ค่าใหม่ล่าสุดเสมอ
+  const token = localStorage.getItem("auth_token") || localStorage.getItem("firebase_token") || "";
+
   const response = await fetch(`${apiUrl}/api/orders/orders_get`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
     },
   });
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch orders");
+  const json = await response.json();
+
+  // ✨ เช็ค success จาก APIResponse
+  if (!response.ok || !json.success) {
+    throw new Error(json.message || "Failed to fetch orders");
   }
 
-  const data = await response.json();
-  return data;
+  // ✨ คืนค่าจากกล่อง data
+  return json.data;
 }
 
 export async function getOrderById(orderId: string): Promise<Order> {
-  const response = await fetch(`${apiUrl}/api/orders/orders_get`, {
+  const token = localStorage.getItem("auth_token") || localStorage.getItem("firebase_token") || "";
+
+  // ✨ เปลี่ยนไปใช้ Endpoint รายออเดอร์โดยตรง
+  const response = await fetch(`${apiUrl}/api/orders/orders_get/${orderId}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
     },
   });
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch order");
+  const json = await response.json();
+
+  if (!response.ok || !json.success) {
+    throw new Error(json.message || "Failed to fetch order");
   }
 
-  const data: Order[] = await response.json();
-  const order = data.find((o) => o.id === orderId);
-  
-  if (!order) {
-    throw new Error("Order not found");
-  }
-
-  return order;
+  // ✨ ไม่ต้อง find(...) แล้ว เพราะ Backend ส่งมาแค่ออเดอร์เดียว
+  return json.data;
 }
+
+export async function updateStatus(orderId: string, newStatus: string): Promise<string> {
+  const token = localStorage.getItem("auth_token") || localStorage.getItem("firebase_token") || "";
+
+  // ดึงข้อมูล userId อย่างปลอดภัย (ป้องกันกรณี userData ไม่มีใน localStorage)
+  const userDataString = localStorage.getItem("userData");
+  let userId = "";
+  if (userDataString) {
+    const userData = JSON.parse(userDataString);
+    userId = userData.id || userData.uid || ""; // รองรับทั้ง .id และ .uid
+  }
+
+  const response = await fetch(`${apiUrl}/api/orders/orders_put/${orderId}/status`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      user_id: userId,
+      status: newStatus
+    })
+  });
+
+  const json = await response.json();
+
+  // ✨ ถ้าอัปเดตไม่สำเร็จ ให้โยน Error ออกไปให้ UI จัดการ
+  if (!response.ok || !json.success) {
+    throw new Error(json.message || "Failed to update order status");
+  }
+
+  // ✨ คืนค่าข้อความสำเร็จกลับไป (เอาไว้ให้ฝั่ง Component เรียกใช้เพื่อ alert)
+  return json.message;
+}
+
