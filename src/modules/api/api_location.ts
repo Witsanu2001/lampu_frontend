@@ -64,8 +64,6 @@ export async function saveLocationToDB(addressData: any, userId: string): Promis
   return json.data;
 }
 
-// ฟังก์ชันสำหรับอัปเดต/แก้ไขที่อยู่เดิม
-// ฟังก์ชันสำหรับอัปเดต/แก้ไขที่อยู่เดิม
 export async function updateLocationInDB(addressData: any, userId: string): Promise<any> {
   const token = await getFreshToken();
 
@@ -114,6 +112,24 @@ export async function deleteLocationFromDB(id: string): Promise<any> {
   const json = await response.json();
   if (!response.ok || !json.success) {
     throw new Error(json.message || "Failed to delete location");
+  }
+  return json.data;
+}
+
+// ฟังก์ชันสำหรับดึงรายการที่อยู่ทั้งหมดของ User
+export async function getLocationsFromDB(userId: string): Promise<any> {
+  const token = await getFreshToken();
+
+  const response = await fetch(`${apiUrl}/api/users/location_get?user_id=${userId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const json = await response.json();
+  if (!response.ok || !json.success) {
+    throw new Error(json.message || "Failed to fetch locations");
   }
   return json.data;
 }

@@ -1,8 +1,7 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-import { useState, useEffect } from "react";
+import { useEffect, useState} from "react";
 import SelectMaps from "./SelectMaps"; // เปลี่ยน path ให้ตรงกับโฟลเดอร์ของคุณถ้าจำเป็น
 import { useNavigate } from "react-router-dom";
-import { saveLocationToDB, updateLocationInDB } from "../api/api_location.ts";
+import { deleteLocationFromDB, getLocationsFromDB, saveLocationToDB, updateLocationInDB } from "../api/api_location.ts";
 
 interface AddressItem {
   id: string;
@@ -38,14 +37,6 @@ export default function Address() {
 
   const [isDefault, setIsDefault] = useState(false);
   const [showMap, setShowMap] = useState(false);
-
-  // โหลดข้อมูลจาก localStorage ตอนเปิดเว็บ
-  useEffect(() => {
-    const savedAddresses = localStorage.getItem("userAddresses");
-    if (savedAddresses) {
-      setAddresses(JSON.parse(savedAddresses));
-    }
-  }, []);
 
   const syncPrimaryAddress = (updatedAddresses: AddressItem[]) => {
     const defaultAddr = updatedAddresses.find((a) => a.isDefault);
@@ -90,6 +81,35 @@ export default function Address() {
     setShowForm(true);
     setShowMap(false);
   };
+
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      const userDataString = localStorage.getItem("userData");
+      if (userDataString) {
+        const userData = JSON.parse(userDataString);
+        const userId = userData.id || userData.uid || "";
+        
+        if (userId) {
+          try {
+            // ดึงข้อมูลจากฐานข้อมูลจริง
+            const dbLocations = await getLocationsFromDB(userId);
+            setAddresses(dbLocations || []);
+            syncPrimaryAddress(dbLocations || []); // ซิงค์ลง localStorage ให้เป็นปัจจุบัน
+          } catch (error) {
+            console.error("Failed to fetch locations from DB:", error);
+            // Fallback: ถ้าเน็ตหลุดหรือ API พัง ให้ดึงจาก localStorage ขัดตาทัพไปก่อน
+            const savedAddresses = localStorage.getItem("userAddresses");
+            if (savedAddresses) {
+              setAddresses(JSON.parse(savedAddresses));
+            }
+          }
+        }
+      }
+    };
+
+    fetchLocations();
+  }, []);
 
   // 🌟 2. เปลี่ยนให้เป็น async เพื่อรอ API บันทึกข้อมูล
   const handleSave = async () => {
@@ -177,11 +197,19 @@ export default function Address() {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบที่อยู่นี้?")) {
-      const updatedAddresses = addresses.filter((addr) => addr.id !== id);
-      setAddresses(updatedAddresses);
-      syncPrimaryAddress(updatedAddresses);
+      try {
+        await deleteLocationFromDB(id); // สั่งลบที่ Backend ก่อน
+        
+        // เมื่อ Backend ลบสำเร็จ ค่อยอัปเดตหน้าจอ
+        const updatedAddresses = addresses.filter((addr) => addr.id !== id);
+        setAddresses(updatedAddresses);
+        syncPrimaryAddress(updatedAddresses);
+      } catch (error) {
+        console.error("Delete location error:", error);
+        alert("เกิดข้อผิดพลาด ไม่สามารถลบข้อมูลออกจากระบบได้");
+      }
     }
   };
 
