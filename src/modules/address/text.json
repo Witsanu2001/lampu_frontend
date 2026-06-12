@@ -1,0 +1,35 @@
+{
+  "mainItems": [
+    {
+      "id": "FpBBBw4TPVbBCowmFVEi",
+      "name": "ชุดหมูกระทะอิ่มจุใจ",
+      "price": 300,
+      "quantity": 1,
+      "subtotal": 300
+    }
+  ],
+  "addOnItems": [],
+  "equipment": {
+    "stoveCount": 1,
+    "panCount": 1,
+    "charcoalCount": 1,
+    "extraStoves": 0,
+    "extraPans": 0,
+    "stoveFee": 0,
+    "panFee": 0,
+    "charcoalFee": 10
+  },
+  "shipping": {
+    "location_id": "1781258229192",
+    "location": { "lat": 8.323608020998151, "lng": 99.3616969445107 },
+    "feePerSet": 10,
+    "totalFee": 10
+  },
+  "payment": { "method": "", "hasSlip": false },
+  "totals": {
+    "cartTotal": 300,
+    "addOnTotal": 0,
+    "shippingFee": 10,
+    "grandTotal": 320
+  }
+}

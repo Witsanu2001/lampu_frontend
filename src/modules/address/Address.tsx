@@ -2,8 +2,8 @@
 import { useState, useEffect } from "react";
 import SelectMaps from "./SelectMaps"; // เปลี่ยน path ให้ตรงกับโฟลเดอร์ของคุณถ้าจำเป็น
 import { useNavigate } from "react-router-dom";
+import { saveLocationToDB, updateLocationInDB } from "../api/api_location.ts";
 
-// 🌟 1. เพิ่มค่า ค่าส่ง, ระยะทาง, และสถานะนัดรับ ลงใน Interface
 interface AddressItem {
   id: string;
   name: string;
@@ -11,9 +11,9 @@ interface AddressItem {
   details: string;
   note: string;
   location: { lat: number; lng: number } | null;
-  deliveryFee: number; // เก็บค่าส่ง
-  distance: number; // เก็ประยะทาง
-  isMeetup: boolean; // เก็บสถานะนัดรับ
+  deliveryFee: number;
+  distance: number;
+  isMeetup: boolean;
   isDefault: boolean;
 }
 
@@ -32,7 +32,6 @@ export default function Address() {
     null,
   );
 
-  // 🌟 2. สร้าง State มารับค่าชั่วคราวตอนปักหมุดเสร็จ
   const [deliveryFee, setDeliveryFee] = useState<number>(0);
   const [distance, setDistance] = useState<number>(0);
   const [isMeetup, setIsMeetup] = useState<boolean>(false);
@@ -48,7 +47,6 @@ export default function Address() {
     }
   }, []);
 
-  // ฟังก์ชันบันทึกข้อมูลหลัก (Primary Address)
   const syncPrimaryAddress = (updatedAddresses: AddressItem[]) => {
     const defaultAddr = updatedAddresses.find((a) => a.isDefault);
     if (defaultAddr) {
@@ -73,7 +71,6 @@ export default function Address() {
       setAddressDetails(addressToEdit.details);
       setDeliveryNote(addressToEdit.note || "");
       setLocation(addressToEdit.location);
-      // โหลดค่าเดิมมาแสดงด้วย
       setDeliveryFee(addressToEdit.deliveryFee || 0);
       setDistance(addressToEdit.distance || 0);
       setIsMeetup(addressToEdit.isMeetup || false);
@@ -94,7 +91,8 @@ export default function Address() {
     setShowMap(false);
   };
 
-  const handleSave = () => {
+  // 🌟 2. เปลี่ยนให้เป็น async เพื่อรอ API บันทึกข้อมูล
+  const handleSave = async () => {
     if (!recipientName.trim()) {
       alert("กรุณากรอกชื่อผู้รับครับ/ค่ะ");
       return;
@@ -112,9 +110,19 @@ export default function Address() {
       return;
     }
 
-    let updatedAddresses = [...addresses];
+    // ดึง User ID จาก LocalStorage
+    let userId = "";
+    const userDataString = localStorage.getItem("userData");
+    if (userDataString) {
+      const userData = JSON.parse(userDataString);
+      userId = userData.id || userData.uid || "";
+    }
 
-    // 🌟 3. ยัดค่าการจัดส่งลงไปใน Object เตรียมบันทึกเข้า LocalStorage
+    if (!userId) {
+      alert("ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่");
+      return;
+    }
+
     const newAddress: AddressItem = {
       id: editingId || Date.now().toString(),
       name: recipientName,
@@ -122,35 +130,51 @@ export default function Address() {
       details: addressDetails,
       note: deliveryNote,
       location,
-      deliveryFee, // บันทึกค่าส่ง 0, 10
-      distance, // บันทึกกิโลเมตร
-      isMeetup, // บันทึกสถานะนัดรับ true, false
+      deliveryFee,
+      distance,
+      isMeetup,
       isDefault,
     };
 
-    if (editingId) {
-      updatedAddresses = updatedAddresses.map((addr) =>
-        addr.id === editingId ? newAddress : addr,
-      );
-    } else {
-      if (updatedAddresses.length >= 3) {
-        alert("คุณสามารถเพิ่มที่อยู่ได้สูงสุด 3 แห่งเท่านั้นครับ");
-        return;
+    try {
+      if (editingId) {
+        // 🌟 เรียก API อัปเดตข้อมูลพิกัดเดิม
+        await updateLocationInDB(newAddress, userId);
+      } else {
+        // 🌟 เรียก API บันทึกข้อมูลพิกัดใหม่
+        await saveLocationToDB(newAddress, userId);
       }
-      updatedAddresses.push(newAddress);
-    }
 
-    if (newAddress.isDefault) {
-      updatedAddresses = updatedAddresses.map((addr) => ({
-        ...addr,
-        isDefault: addr.id === newAddress.id,
-      }));
-    }
+      // ถ้า Backend ผ่าน ก็มาอัปเดต State และ LocalStorage ต่อ
+      let updatedAddresses = [...addresses];
 
-    setAddresses(updatedAddresses);
-    syncPrimaryAddress(updatedAddresses);
-    setShowForm(false);
-    alert("บันทึกที่อยู่เรียบร้อยแล้ว! 📍");
+      if (editingId) {
+        updatedAddresses = updatedAddresses.map((addr) =>
+          addr.id === editingId ? newAddress : addr,
+        );
+      } else {
+        if (updatedAddresses.length >= 3) {
+          alert("คุณสามารถเพิ่มที่อยู่ได้สูงสุด 3 แห่งเท่านั้นครับ");
+          return;
+        }
+        updatedAddresses.push(newAddress);
+      }
+
+      if (newAddress.isDefault) {
+        updatedAddresses = updatedAddresses.map((addr) => ({
+          ...addr,
+          isDefault: addr.id === newAddress.id,
+        }));
+      }
+
+      setAddresses(updatedAddresses);
+      syncPrimaryAddress(updatedAddresses);
+      setShowForm(false);
+      alert("บันทึกที่อยู่เรียบร้อยแล้ว! 📍");
+    } catch (error) {
+      console.error("Save location error:", error);
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูลลงระบบฐานข้อมูล");
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -266,7 +290,6 @@ export default function Address() {
                     </p>
                     <p className="whitespace-pre-wrap mb-2">{addr.details}</p>
 
-                    {/* 🌟 4. เพิ่มป้ายบอกค่าส่งในหน้าแสดงผลด้วย เพื่อให้ลูกค้าเห็นชัดเจน */}
                     <div className="flex items-center gap-2 mt-3 mb-2">
                       <span
                         className={`px-2 py-1 rounded-md text-xs font-bold ${
@@ -368,7 +391,7 @@ export default function Address() {
                 type="text"
                 value={deliveryNote}
                 onChange={(e) => setDeliveryNote(e.target.value)}
-                placeholder="เช่น บ้านรั้วสีฟ้า, ฝากไว้ที่ตึกนิติบุคคล, วางไว้หน้าประตู..."
+                placeholder="เช่น บ้านรั้วสีฟ้า, ฝากไว้ที่ตึกนิติบุคคล..."
                 className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
               />
             </div>
@@ -377,70 +400,35 @@ export default function Address() {
               <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
                 พิกัดจัดส่ง (บนแผนที่)
               </label>
-              {!showMap ? (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-700/50">
-                  <div className="flex-1">
-                    {location ? (
-                      <div>
-                        <p className="text-green-600 dark:text-green-400 font-semibold flex items-center gap-2">
-                          <span>✅ ปักหมุดเรียบร้อยแล้ว</span>
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          ระยะทางจัดส่ง: {(distance || 0).toFixed(1)} กม. |{" "}
-                          {isMeetup
-                            ? "🤝 นัดรับสินค้า"
-                            : deliveryFee === 0
-                              ? "🎉 ส่งฟรี"
-                              : `💰 ค่าจัดส่ง ${deliveryFee || 0} บาท`}
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-orange-500 font-medium">
-                        📍 ยังไม่ได้เลือกพิกัดจัดส่ง
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <div className="flex-1">
+                  {location ? (
+                    <div>
+                      <p className="text-green-600 dark:text-green-400 font-semibold flex items-center gap-2">
+                        <span>✅ ปักหมุดเรียบร้อยแล้ว</span>
                       </p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setShowMap(true)}
-                    className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg text-sm font-semibold transition-colors"
-                  >
-                    {location ? "แก้ไขหมุดแผนที่" : "เปิดแผนที่เพื่อปักหมุด"}
-                  </button>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        ระยะทางจัดส่ง: {(distance || 0).toFixed(1)} กม. |{" "}
+                        {isMeetup
+                          ? "🤝 นัดรับสินค้า"
+                          : deliveryFee === 0
+                            ? "🎉 ส่งฟรี"
+                            : `💰 ค่าจัดส่ง ${deliveryFee || 0} บาท`}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-orange-500 font-medium">
+                      📍 ยังไม่ได้เลือกพิกัดจัดส่ง
+                    </p>
+                  )}
                 </div>
-              ) : (
-                // 🎯 เอาแบบเดิมกลับมา แต่เปลี่ยนความสูงเป็น h-[75vh] และบังคับความสูงขั้นต่ำ min-h-[600px]
-                <div className="relative h-[75vh] min-h-[600px] border-2 border-emerald-500 rounded-xl overflow-hidden flex flex-col">
-                  <SelectMaps
-                    onLocationConfirm={(lat, lng, fee, dist, meetup) => {
-                      setLocation({ lat, lng });
-                      setDeliveryFee(fee);
-                      setDistance(dist);
-                      setIsMeetup(meetup);
-                      setShowMap(false);
-                    }}
-                  />
-
-                  {/* ปุ่ม X สีแดงแบบเดิมของคุณ */}
-                  <button
-                    onClick={() => setShowMap(false)}
-                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-md z-[1000] transition-colors"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              )}
+                <button
+                  onClick={() => setShowMap(true)}
+                  className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg text-sm font-semibold transition-colors"
+                >
+                  {location ? "แก้ไขหมุดแผนที่" : "เปิดแผนที่เพื่อปักหมุด"}
+                </button>
+              </div>
             </div>
 
             <div className="mb-8">
@@ -475,6 +463,52 @@ export default function Address() {
           </div>
         )}
       </div>
+
+      {/* 🌟 3. ย้าย SelectMaps ออกมาทำเป็น Modal แบบเต็มจอสวยๆ */}
+      {showMap && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 transition-opacity">
+          <div className="relative w-full max-w-5xl h-[85vh] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-fadeIn">
+            {/* Header ของ Modal แผนที่ */}
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 z-10">
+              <h3 className="text-lg md:text-xl font-bold text-gray-800 dark:text-white">
+                📍 เลือกพิกัดจัดส่งของคุณ
+              </h3>
+              <button
+                onClick={() => setShowMap(false)}
+                className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-full transition-colors"
+                aria-label="ปิดแผนที่"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* ส่วนแสดงแผนที่ (ยืดเต็มพื้นที่ที่เหลือ) */}
+            <div className="flex-1 relative w-full h-full">
+              <SelectMaps
+                onLocationConfirm={(lat, lng, fee, dist, meetup) => {
+                  setLocation({ lat, lng });
+                  setDeliveryFee(fee);
+                  setDistance(dist);
+                  setIsMeetup(meetup);
+                  setShowMap(false); // ปิด Modal อัตโนมัติเมื่อกดยืนยันจากแผนที่
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

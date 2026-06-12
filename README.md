@@ -109,3 +109,16 @@ npm run build
 firebase deploy --only hosting
 
 เคลียข้อมูลที่ commit ไป > git reset origin/main
+
+
+git fetch
+
+git merge
+
+git pull
+
+git pull origin main
+
+หรือถ้า branch หลักเป็น master
+
+git pull origin master

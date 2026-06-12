@@ -141,20 +141,7 @@ export default function OrderDetail() {
     try {
       const successMessage = await updateStatus(orderId, "preparing");
       alert(successMessage);
-      // อัปเดตข้อมูลบนหน้าจอให้เป็น preparing ทันที
       setOrder((prev) => prev ? { ...prev, status: "preparing" } : prev);
-    } catch (error: any) {
-      alert(`เกิดข้อผิดพลาด: ${error.message}`);
-    }
-  };
-
-  const handleReadyrder = async () => {
-    if (!orderId) return;
-    try {
-      const successMessage = await updateStatus(orderId, "ready");
-      alert(successMessage);
-      // อัปเดตข้อมูลบนหน้าจอให้เป็น ready ทันที
-      setOrder((prev) => prev ? { ...prev, status: "ready" } : prev);
     } catch (error: any) {
       alert(`เกิดข้อผิดพลาด: ${error.message}`);
     }
@@ -178,10 +165,12 @@ export default function OrderDetail() {
 
     if (!orderId) return;
     try {
-      const successMessage = await updateStatus(orderId, "start");
+      const successMessage = await updateStatus(orderId, "ready", selectedRiderId);
+      
       alert(successMessage);
-      // อัปเดตข้อมูลบนหน้าจอให้เป็น ready ทันที
       setOrder((prev) => prev ? { ...prev, status: "ready" } : prev);
+      setIsModalOpen(false);
+      
     } catch (error: any) {
       alert(`เกิดข้อผิดพลาด: ${error.message}`);
     }

@@ -7,7 +7,8 @@ import { useNavigate } from "react-router-dom";
 
 export default function Payment() {
   const navigate = useNavigate();
-  const { cart, cartTotal, clearCart, updateQuantity, removeFromCart } = useCart();
+  const { cart, cartTotal, clearCart, updateQuantity, removeFromCart } =
+    useCart();
 
   // 🌟 เพิ่ม State สำหรับเก็บข้อมูลเมนูเพิ่มเติมจาก API
   const [addOnMenus, setAddOnMenus] = useState<any[]>([]);
@@ -16,25 +17,25 @@ export default function Payment() {
   const [selectedAddOns, setSelectedAddOns] = useState<any[]>([]);
   const [shippingAddress, setShippingAddress] = useState<any>(null);
 
-  // โควต้าปัจจุบันของชุดหมูกระทะ
   const mainItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const [stoveCount, setStoveCount] = useState(1);
   const [panCount, setPanCount] = useState(1);
   const [charcoalCount, setCharcoalCount] = useState(0);
-
-  // 🌟 ดึงข้อมูลเมนูเพิ่มเติม (Additional) จาก API
   useEffect(() => {
     const fetchAddOnMenus = async () => {
       try {
-        const token = localStorage.getItem("auth_token") || localStorage.getItem("firebase_token") || "";
+        const token =
+          localStorage.getItem("auth_token") ||
+          localStorage.getItem("firebase_token") ||
+          "";
         const response = await fetch(
           "https://api-gateway-879165280409.asia-southeast1.run.app/api/orders/menus_type/additional",
           {
             headers: {
-              "Authorization": `Bearer ${token}`
-            }
-          }
+              Authorization: `Bearer ${token}`,
+            },
+          },
         );
 
         if (response.ok) {
@@ -45,7 +46,7 @@ export default function Payment() {
             name: item.name_menu,
             price: item.price_menu,
             image: item.image_url_menu,
-            available: item.available
+            available: item.available,
           }));
 
           // เลือกแสดงผลเฉพาะเมนูที่พร้อมขาย (available === true)
@@ -164,7 +165,8 @@ export default function Payment() {
     });
   };
 
-  const deliveryFeePerSet = shippingAddress?.deliveryFee || shippingAddress?.fee || 0;
+  const deliveryFeePerSet =
+    shippingAddress?.deliveryFee || shippingAddress?.fee || 0;
   const shippingFee = mainItemsCount * deliveryFeePerSet;
 
   const addOnTotal = selectedAddOns.reduce(
@@ -196,14 +198,12 @@ export default function Payment() {
     let userId = "";
     if (userDataString) {
       const userData = JSON.parse(userDataString);
-      // เปลี่ยน .id หรือ .uid ตามโครงสร้างข้อมูลใน userData ของคุณนะครับ
       userId = userData.id || userData.uid || "";
     }
 
     // 2. ถ้าไม่มี userId (อาจจะหลุดล็อกอิน) ให้หยุดการทำงานและแจ้งเตือน
     if (!userId) {
       alert("ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่อีกครั้งครับ");
-      // อาจจะ navigate("/login") ตรงนี้ด้วยก็ได้ครับ
       return;
     }
 
@@ -233,8 +233,10 @@ export default function Payment() {
         charcoalFee: charcoalCount * 10,
       },
       shipping: {
-        address: shippingAddress.details || shippingAddress.address,
-        location: shippingAddress.location,
+        // ✨ เปลี่ยนจาก address เป็น location_id แล้วดึง id ของสถานที่จัดส่งมาใส่
+        location_id: shippingAddress.id,
+
+        location: shippingAddress.location, // (ยังเก็บพิกัด lat, lng ไว้เผื่อจำเป็น)
         feePerSet: deliveryFeePerSet,
         totalFee: shippingFee,
       },
@@ -254,7 +256,7 @@ export default function Payment() {
       const formData = new FormData();
       formData.append("order", JSON.stringify(orderData));
 
-      // ✨ 3. แนบ user_id เข้าไปใน FormData ตรงนี้เลยครับ
+      // ✨ 3. แนบ user_id เข้าไปใน FormData
       formData.append("user_id", userId);
 
       if (paymentMethod === "promptpay" && slipFile) {
@@ -265,16 +267,20 @@ export default function Payment() {
         formData.append("home_image", homeImageFile);
       }
 
-      const token = localStorage.getItem("auth_token") || localStorage.getItem("firebase_token") || "";
+      // 💡 แนะนำ: ถ้าทำระบบ Token อัตโนมัติไว้แล้ว อย่าลืมเปลี่ยนเป็น await getFreshToken() นะครับ
+      const token =
+        localStorage.getItem("auth_token") ||
+        localStorage.getItem("firebase_token") ||
+        "";
       const response = await fetch(
         "https://api-gateway-879165280409.asia-southeast1.run.app/api/orders/orders_add",
         {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
           body: formData,
-        }
+        },
       );
 
       if (response.ok) {
@@ -290,7 +296,9 @@ export default function Payment() {
         navigate("/");
       } else {
         const errorData = await response.json();
-        alert(`เกิดข้อผิดพลาด: ${errorData.error || "ไม่สามารถส่งคำสั่งซื้อได้"}`);
+        alert(
+          `เกิดข้อผิดพลาด: ${errorData.error || "ไม่สามารถส่งคำสั่งซื้อได้"}`,
+        );
       }
     } catch (error) {
       console.error("Error submitting order:", error);
@@ -308,8 +316,18 @@ export default function Payment() {
             className="flex items-center justify-center w-10 h-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300"
             aria-label="กลับไปหน้าหลัก"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
           </button>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-white m-0">
@@ -346,8 +364,18 @@ export default function Payment() {
                   </p>
                   {shippingAddress.location && (
                     <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-3 flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
                       </svg>
                       พิกัด: {shippingAddress.location.lat.toFixed(5)},{" "}
                       {shippingAddress.location.lng.toFixed(5)}
@@ -375,8 +403,18 @@ export default function Payment() {
                 </label>
                 <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-500 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">
                   <div className="flex flex-col items-center justify-center pt-2 pb-3">
-                    <svg className="w-6 h-6 mb-1 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <svg
+                      className="w-6 h-6 mb-1 text-gray-500 dark:text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
                     </svg>
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                       กดเพื่อเลือกรูปบ้าน (ถ้ามี)
@@ -401,8 +439,18 @@ export default function Payment() {
                       onClick={() => setHomeImageFile(null)}
                       className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     </button>
                   </div>
@@ -828,8 +876,18 @@ export default function Payment() {
                       onClick={handleDownloadQR}
                       className="mb-6 flex items-center justify-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg text-sm font-semibold transition-colors"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                        />
                       </svg>
                       บันทึก QR Code
                     </button>
@@ -840,8 +898,18 @@ export default function Payment() {
                       </label>
                       <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-500 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <svg className="w-8 h-8 mb-2 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          <svg
+                            className="w-8 h-8 mb-2 text-gray-500 dark:text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
                           </svg>
                           <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
                             กดเพื่อเลือกรูปภาพ หรือ ถ่ายรูปสลิป
@@ -866,8 +934,18 @@ export default function Payment() {
                             onClick={() => setSlipPreview(null)}
                             className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
                             </svg>
                           </button>
                         </div>

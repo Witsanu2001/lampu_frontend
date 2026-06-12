@@ -1,42 +1,52 @@
-import { Route} from "react-router-dom";
+import { Route } from "react-router-dom";
 import Dashboard from "./dashboards/Dashboard";
 import UserSetting from "./users/ีUserSetting";
 import MenuSetting from "./menu/MenuSetting";
 import OrderSetting from "./orders/OrderSetting";
 import { ProtectedRoute } from "../../shared/middlewares/ProtectedRoute";
+import Settingsdata from ".";
 
 export const settingsDataRoutes = () => (
   <>
-    <Route 
+    <Route
+      key="settingsData"
+      path="/settingsData"
+      element={
+        <ProtectedRoute>
+          <Settingsdata />
+        </ProtectedRoute>
+      }
+    />
+    <Route
       key="dashboard"
-      path="/settingsData/dashboards" 
+      path="/settingsData/dashboards"
       element={
         <ProtectedRoute>
           <Dashboard />
         </ProtectedRoute>
       }
-    />  
-    <Route 
+    />
+    <Route
       key="users"
-      path="/settingsData/users" 
+      path="/settingsData/users"
       element={
         <ProtectedRoute>
           <UserSetting />
         </ProtectedRoute>
       }
     />
-    <Route 
+    <Route
       key="menu"
-      path="/settingsData/menu" 
+      path="/settingsData/menu"
       element={
         <ProtectedRoute>
           <MenuSetting />
         </ProtectedRoute>
       }
     />
-    <Route 
+    <Route
       key="orders"
-      path="/settingsData/orders" 
+      path="/settingsData/orders"
       element={
         <ProtectedRoute>
           <OrderSetting />

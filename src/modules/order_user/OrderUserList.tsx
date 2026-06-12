@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAllOrders } from "../api/api_order";
+import { getOrderUserById } from "../api/api_order";
 import type { Order } from "../const/order";
 import { onChildAdded, onChildChanged, ref } from "firebase/database";
 import { db } from "../const/firebase";
@@ -18,13 +18,13 @@ type OrderStatus =
 
 const getStatusConfig = (status: OrderStatus) => {
   const configs = {
+    // new: {
+    //   label: "ออเดอร์ใหม่",
+    //   bgColor: "bg-blue-100 dark:bg-blue-900",
+    //   textColor: "text-blue-800 dark:text-blue-200",
+    //   borderColor: "border-blue-300 dark:border-blue-700",
+    // },
     new: {
-      label: "ออเดอร์ใหม่",
-      bgColor: "bg-blue-100 dark:bg-blue-900",
-      textColor: "text-blue-800 dark:text-blue-200",
-      borderColor: "border-blue-300 dark:border-blue-700",
-    },
-    pending: {
       label: "รอยืนยัน",
       bgColor: "bg-yellow-100 dark:bg-yellow-900",
       textColor: "text-yellow-800 dark:text-yellow-200",
@@ -59,7 +59,7 @@ const getStatusConfig = (status: OrderStatus) => {
   return configs[status] || configs["new"];
 };
 
-export default function OrderList() {
+export default function OrderUserList() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +69,7 @@ export default function OrderList() {
     // โหลดข้อมูลครั้งแรกตามปกติ
     const fetchOrders = async () => {
       try {
-        const data = await getAllOrders();
+        const data = await getOrderUserById();
         setOrders(Array.isArray(data) ? data : []);
       } catch (err) {
         setError("Failed to load orders");
@@ -126,7 +126,7 @@ export default function OrderList() {
   };
 
   const handleOrderClick = (orderId: string) => {
-    navigate(`/orders/${orderId}`);
+    navigate(`/orders_user/${orderId}`);
   };
 
   if (loading) {

@@ -4,6 +4,7 @@ import Home from "../../assets/home.png";
 import Order from "../../assets/orderCheck.png";
 import Setting from "../../assets/settings.png";
 import UserSetting from "../../assets/user-setting.png";
+import ShoppingList from "../../assets/shopping_list.png";
 
 export interface MenuItem {
   label: string;
@@ -17,16 +18,24 @@ export const menuConfig: MenuItem[] = [
   {
     label: "หน้าแรก",
     to: "/",
+    roles: ["admin","user"],
     iconUrl: Home,
   },
   {
     label: "ออเดอร์",
     to: "/orders",
+    iconUrl: ShoppingList,
+  },
+  {
+    label: "ออเดอร์",
+    to: "/orders_user",
+    roles: ["user"],
     iconUrl: Order,
   },
   {
     label: "ตั้งค่า",
     to: "/settings",
+    roles: ["user"],
     iconUrl: Setting,
   },
   {

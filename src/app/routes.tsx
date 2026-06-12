@@ -5,6 +5,8 @@ import { loginRoutes } from "../modules/login/route";
 import { orderRoutes } from "../modules/order/route";
 import { homeRoutes } from "../modules/home/route";
 import { addressRoutes } from "../modules/address/route";
+import { paymentRoutes } from "../modules/payment/route";
+import { orderUserRoutes } from "../modules/order_user/route";
 
 export const AppRoutes = ({ user, setUser }: { user: any, setUser: any }) => {
   return (
@@ -12,6 +14,8 @@ export const AppRoutes = ({ user, setUser }: { user: any, setUser: any }) => {
       {loginRoutes(user, setUser)}
       {homeRoutes()}
       {orderRoutes()}
+      {orderUserRoutes()}
+      {paymentRoutes()}
       {addressRoutes()}
       {settingsDataRoutes()}
     </Routes>

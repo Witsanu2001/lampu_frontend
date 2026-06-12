@@ -61,7 +61,7 @@ export default function Login({ setUser }: LoginProps) {
       };
 
       try {
-        const syncResponse = await postUsersSync(idToken, updatedUser);
+        const syncResponse = await postUsersSync(updatedUser);
 
         if (syncResponse.ok) {
           const resData = await syncResponse.json();
@@ -125,7 +125,7 @@ export default function Login({ setUser }: LoginProps) {
             // เก็บ token ไว้ใน localStorage พร้อม expiry time
             setToken(idToken, 24); // 24 hours expiry
             
-            const syncResponse = await postUsersSync(idToken, updatedUser);
+            const syncResponse = await postUsersSync(updatedUser);
 
             if (syncResponse.ok) {
               const resData = await syncResponse.json();

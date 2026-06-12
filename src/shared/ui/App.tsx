@@ -104,7 +104,7 @@ export default function App() {
         setToken(firebaseToken, 24); // 24 hours expiry
 
         // เรียกใช้งานฟังก์ชันแยกตัวเดิม
-        const syncRes = await postUsersSync(firebaseToken, lineUser);
+        const syncRes = await postUsersSync(lineUser);
 
         if (syncRes.ok) {
           const resData = await syncRes.json();

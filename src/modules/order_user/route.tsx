@@ -1,26 +1,26 @@
 import { Route} from "react-router-dom";
-import OrderList from "./OrderList";
-import OrderDetail from "./OrderDetail";
 import { ProtectedRoute } from "../../shared/middlewares/ProtectedRoute";
+import OrderUserList from "./OrderUserList";
+import OrderUserDetail from "./OrderUserDetail";
 
-export const orderRoutes = () => (
+export const orderUserRoutes = () => (
   <>
     <Route 
       key="order"
-      path="/orders" 
+      path="/orders_user" 
       element={
         <ProtectedRoute>
-          <OrderList />
+          <OrderUserList />
         </ProtectedRoute>
       }
     />
 
     <Route 
       key="order-detail"
-      path="/orders/:orderId" 
+      path="/orders_user/:orderId" 
       element={
         <ProtectedRoute>
-          <OrderDetail />
+          <OrderUserDetail />
         </ProtectedRoute>
       }
     />

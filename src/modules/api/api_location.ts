@@ -1,0 +1,119 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { auth } from "../const/firebase";
+
+const apiUrl = import.meta.env.VITE_API_URL;
+
+async function getFreshToken(): Promise<string> {
+  if (auth.currentUser) {
+    return await auth.currentUser.getIdToken();
+  }
+  return localStorage.getItem("auth_token") || localStorage.getItem("firebase_token") || "";
+}
+
+export interface GeoLocation {
+  lat: number;
+  lng: number;
+}
+
+export interface LocationPayload {
+  id: string;
+  user_id: string;
+  name: string;
+  phone: string;
+  details: string;
+  note: string;
+  location: GeoLocation | null;
+  deliveryFee: number;
+  distance: number;
+  isMeetup: boolean;
+  isDefault: boolean;
+}
+
+export async function saveLocationToDB(addressData: any, userId: string): Promise<any> {
+  const token = await getFreshToken();
+
+  // ยิงไปที่ Route /api/users/location_add ตามที่ตั้งไว้ใน main.go ของ User Service
+  const response = await fetch(`${apiUrl}/api/users/location_add`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      id: addressData.id,
+      user_id: userId,          // แนบ user_id ลงไปด้วยตามโครงสร้างตาราง locations
+      name: addressData.name,
+      phone: addressData.phone,
+      details: addressData.details,
+      note: addressData.note,
+      location: addressData.location, // { lat: number, lng: number }
+      deliveryFee: addressData.deliveryFee,
+      distance: addressData.distance,
+      isMeetup: addressData.isMeetup,
+      isDefault: addressData.isDefault,
+    }),
+  });
+
+  const json = await response.json();
+
+  // ตรวจสอบสถานะการตอบกลับตามโครงสร้าง APIResponse มาตรฐาน
+  if (!response.ok || !json.success) {
+    throw new Error(json.message || "Failed to save location");
+  }
+
+  return json.data;
+}
+
+// ฟังก์ชันสำหรับอัปเดต/แก้ไขที่อยู่เดิม
+// ฟังก์ชันสำหรับอัปเดต/แก้ไขที่อยู่เดิม
+export async function updateLocationInDB(addressData: any, userId: string): Promise<any> {
+  const token = await getFreshToken();
+
+  // 🌟 จัดรูป Payload ให้มี user_id ด้วย
+  const payload: LocationPayload = {
+    id: addressData.id,
+    user_id: userId, // 👈 ต้องแนบไปด้วยครับ
+    name: addressData.name,
+    phone: addressData.phone,
+    details: addressData.details,
+    note: addressData.note,
+    location: addressData.location,
+    deliveryFee: addressData.deliveryFee,
+    distance: addressData.distance,
+    isMeetup: addressData.isMeetup,
+    isDefault: addressData.isDefault,
+  };
+
+  const response = await fetch(`${apiUrl}/api/users/location_update`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const json = await response.json();
+  if (!response.ok || !json.success) {
+    throw new Error(json.message || "Failed to update location");
+  }
+  return json.data;
+}
+// ฟังก์ชันสำหรับลบที่อยู่จัดส่ง
+export async function deleteLocationFromDB(id: string): Promise<any> {
+  const token = await getFreshToken();
+
+  // ส่ง id ไปทาง Query Parameter (?id=xxx) ให้ตรงกับหลังบ้าน Go
+  const response = await fetch(`${apiUrl}/api/users/location_delete?id=${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const json = await response.json();
+  if (!response.ok || !json.success) {
+    throw new Error(json.message || "Failed to delete location");
+  }
+  return json.data;
+}
