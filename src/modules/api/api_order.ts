@@ -1,19 +1,34 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Order } from "../const/order";
 // ✨ 1. Import auth ของ Firebase เข้ามา
-import { auth } from "../const/firebase"; 
+import { auth } from "../const/firebase";
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
 // ✨ 2. สร้างฟังก์ชันตัวช่วยดึง Token ให้ฉลาดขึ้น
-async function getFreshToken(): Promise<string> {
-  // ถ้า Firebase โหลดเสร็จและมี user ล็อกอินอยู่
+export async function getFreshToken(): Promise<string> {
   if (auth.currentUser) {
-    // คำสั่งนี้จะเช็คอายุ Token ให้ ถ้าหมดอายุ มันจะดึงตัวใหม่ให้ทันทีก่อน return
-    return await auth.currentUser.getIdToken(); 
+    return await auth.currentUser.getIdToken();
   }
-  
-  // จังหวะหน้าเว็บเพิ่งรีเฟรช auth.currentUser อาจจะยังโหลดไม่เสร็จ ให้ fallback ไปใช้ localStorage ขัดตาทัพ
   return localStorage.getItem("auth_token") || localStorage.getItem("firebase_token") || "";
+}
+
+export async function addOrders(formData: FormData, token: string) {
+  const response = await fetch(`${apiUrl}/api/orders/orders_add`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`
+    },
+    body: formData,
+  });
+
+  const json = await response.json();
+
+  if (!response.ok || !json.success) {
+    throw new Error(json.message || "Failed to add order");
+  }
+
+  return json; // คืนค่าผลลัพธ์จากเซิร์ฟเวอร์
 }
 
 export async function getAllOrders(): Promise<Order[]> {
@@ -67,7 +82,7 @@ export async function updateStatus(orderId: string, newStatus: string, riderId?:
     const userDataString = localStorage.getItem("userData");
     if (userDataString) {
       const userData = JSON.parse(userDataString);
-      userId = userData.id || userData.uid || ""; 
+      userId = userData.id || userData.uid || "";
     }
   }
 
@@ -99,7 +114,7 @@ export async function getOrderUserById(): Promise<Order> {
   const userDataString = localStorage.getItem("userData");
   if (userDataString) {
     const userData = JSON.parse(userDataString);
-    userId = userData.id || userData.uid || ""; 
+    userId = userData.id || userData.uid || "";
   }
 
   const response = await fetch(`${apiUrl}/api/orders/orders_get/${userId}/orderByUser`, {
@@ -117,4 +132,19 @@ export async function getOrderUserById(): Promise<Order> {
   }
 
   return json.data;
+}
+
+export async function getAddOnMenus(token: string) {
+  const response = await fetch(`${apiUrl}/api/orders/menus_type/additional`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error("Failed to fetch");
+  const json = await response.json();
+  return (json.data || []).map((item: any) => ({
+    id: item.id,
+    name: item.name_menu,
+    price: item.price_menu,
+    image: item.image_url_menu,
+    available: item.available,
+  }));
 }

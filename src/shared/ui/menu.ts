@@ -17,13 +17,14 @@ export interface MenuItem {
 export const menuConfig: MenuItem[] = [
   {
     label: "หน้าแรก",
-    to: "/",
+    to: "/home",
     roles: ["admin","user"],
     iconUrl: Home,
   },
   {
     label: "ออเดอร์",
     to: "/orders",
+    roles: ["admin"],
     iconUrl: ShoppingList,
   },
   {

@@ -5,7 +5,7 @@ import { ProtectedRoute } from "../../shared/middlewares/ProtectedRoute";
 export const homeRoutes = () => (
   <Route 
     key="home"
-    path="/" 
+    path="/home" 
       element={
       <ProtectedRoute>
         <Home />

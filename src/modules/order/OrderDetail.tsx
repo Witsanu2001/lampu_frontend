@@ -135,13 +135,12 @@ export default function OrderDetail() {
 
   const zones = getZoneCircles();
 
-
   const handleConfirmOrder = async () => {
     if (!orderId) return;
     try {
       const successMessage = await updateStatus(orderId, "preparing");
       alert(successMessage);
-      setOrder((prev) => prev ? { ...prev, status: "preparing" } : prev);
+      setOrder((prev) => (prev ? { ...prev, status: "preparing" } : prev));
     } catch (error: any) {
       alert(`เกิดข้อผิดพลาด: ${error.message}`);
     }
@@ -165,12 +164,15 @@ export default function OrderDetail() {
 
     if (!orderId) return;
     try {
-      const successMessage = await updateStatus(orderId, "ready", selectedRiderId);
-      
+      const successMessage = await updateStatus(
+        orderId,
+        "ready",
+        selectedRiderId,
+      );
+
       alert(successMessage);
-      setOrder((prev) => prev ? { ...prev, status: "ready" } : prev);
+      setOrder((prev) => (prev ? { ...prev, status: "ready" } : prev));
       setIsModalOpen(false);
-      
     } catch (error: any) {
       alert(`เกิดข้อผิดพลาด: ${error.message}`);
     }
@@ -183,7 +185,7 @@ export default function OrderDetail() {
       const successMessage = await updateStatus(orderId, "refuse");
       alert(successMessage);
       // อัปเดตข้อมูลบนหน้าจอให้เป็น refuse ทันที
-      setOrder((prev) => prev ? { ...prev, status: "refuse" } : prev);
+      setOrder((prev) => (prev ? { ...prev, status: "refuse" } : prev));
     } catch (error: any) {
       alert(`เกิดข้อผิดพลาด: ${error.message}`);
     }
@@ -223,8 +225,18 @@ export default function OrderDetail() {
           onClick={() => navigate("/orders")}
           className="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 mb-3"
         >
-          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg
+            className="w-4 h-4 mr-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
           กลับไปหน้ารายการออเดอร์
         </button>
@@ -240,17 +252,24 @@ export default function OrderDetail() {
       <div className="space-y-4">
         {/* Main Items */}
         <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
-          <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">รายการหลัก</h2>
+          <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">
+            รายการหลัก
+          </h2>
           <div className="space-y-2">
             {order.mainItems?.map((item, index) => (
-              <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-600 last:border-0">
+              <div
+                key={index}
+                className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-600 last:border-0"
+              >
                 <div>
                   <p className="font-medium">{item.name}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     ฿{item.price?.toLocaleString()} x {item.quantity}
                   </p>
                 </div>
-                <span className="font-bold">฿{item.subtotal?.toLocaleString()}</span>
+                <span className="font-bold">
+                  ฿{item.subtotal?.toLocaleString()}
+                </span>
               </div>
             ))}
           </div>
@@ -259,17 +278,24 @@ export default function OrderDetail() {
         {/* Add-on Items */}
         {order.addOnItems?.length > 0 && (
           <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
-            <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">รายการเพิ่มเติม</h2>
+            <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">
+              รายการเพิ่มเติม
+            </h2>
             <div className="space-y-2">
               {order.addOnItems.map((item, index) => (
-                <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-600 last:border-0">
+                <div
+                  key={index}
+                  className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-600 last:border-0"
+                >
                   <div>
                     <p className="font-medium">{item.name}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       ฿{item.price?.toLocaleString()} x {item.quantity}
                     </p>
                   </div>
-                  <span className="font-bold">฿{item.subtotal?.toLocaleString()}</span>
+                  <span className="font-bold">
+                    ฿{item.subtotal?.toLocaleString()}
+                  </span>
                 </div>
               ))}
             </div>
@@ -278,7 +304,9 @@ export default function OrderDetail() {
 
         {/* Equipment */}
         <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
-          <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">อุปกรณ์</h2>
+          <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">
+            อุปกรณ์
+          </h2>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">เตา:</span>
@@ -294,13 +322,17 @@ export default function OrderDetail() {
             </div>
             {order.equipment?.extraStoves > 0 && (
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">เตาเพิ่ม:</span>
+                <span className="text-gray-600 dark:text-gray-400">
+                  เตาเพิ่ม:
+                </span>
                 <span>{order.equipment.extraStoves} ชุด</span>
               </div>
             )}
             {order.equipment?.extraPans > 0 && (
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">กระทะเพิ่ม:</span>
+                <span className="text-gray-600 dark:text-gray-400">
+                  กระทะเพิ่ม:
+                </span>
                 <span>{order.equipment.extraPans} ใบ</span>
               </div>
             )}
@@ -310,15 +342,32 @@ export default function OrderDetail() {
         {/* 🌟 Shipping (ปรับให้มีปุ่มดูสถานที่) */}
         <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
           <div className="flex justify-between items-center mb-3">
-            <h2 className="font-semibold text-orange-600 dark:text-orange-400">ที่อยู่จัดส่ง</h2>
+            <h2 className="font-semibold text-orange-600 dark:text-orange-400">
+              ที่อยู่จัดส่ง
+            </h2>
             {order.shipping?.location?.lat && order.shipping?.location?.lng && (
               <button
                 onClick={() => setIsMapModalOpen(true)}
                 className="text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 rounded-lg font-medium transition-colors flex items-center gap-1"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
                 </svg>
                 ดูสถานที่ส่ง
               </button>
@@ -332,12 +381,16 @@ export default function OrderDetail() {
 
         {/* Payment */}
         <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
-          <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">การชำระเงิน</h2>
+          <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">
+            การชำระเงิน
+          </h2>
           <div className="mb-3">
             <p className="text-sm">
               วิธีชำระเงิน:{" "}
               <span className="font-medium">
-                {order.payment?.method === "promptpay" ? "พร้อมเพย์" : order.payment?.method}
+                {order.payment?.method === "promptpay"
+                  ? "พร้อมเพย์"
+                  : order.payment?.method}
               </span>
             </p>
           </div>
@@ -346,12 +399,10 @@ export default function OrderDetail() {
           {order.payment?.hasSlip && order.slip_url && (
             <div>
               <p className="text-sm font-medium mb-2">สลิปการโอนเงิน:</p>
-              {/* เปลี่ยน className ของ div และ img ด้านล่างนี้ครับ */}
               <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 p-2 flex justify-center">
                 <img
                   src={order.slip_url}
                   alt="Payment Slip"
-                  // ✨ แก้ไขบรรทัดนี้: เพิ่ม max-h-80 (สูงไม่เกิน 320px) และ object-contain
                   className="w-full max-h-80 object-contain rounded"
                   onError={(e) => {
                     e.currentTarget.src = "/placeholder.png";
@@ -365,7 +416,9 @@ export default function OrderDetail() {
         {/* Home Image */}
         {order.home_image_url && (
           <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
-            <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">รูปบ้านลูกค้า</h2>
+            <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">
+              รูปบ้านลูกค้า
+            </h2>
             {/* เปลี่ยน className ของ div และ img ด้านล่างนี้ครับ */}
             <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 p-2 flex justify-center">
               <img
@@ -383,15 +436,21 @@ export default function OrderDetail() {
 
         {/* Totals */}
         <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
-          <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">สรุปยอดชำระ</h2>
+          <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">
+            สรุปยอดชำระ
+          </h2>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">ยอดรายการหลัก:</span>
+              <span className="text-gray-600 dark:text-gray-400">
+                ยอดรายการหลัก:
+              </span>
               <span>฿{order.totals?.cartTotal?.toLocaleString()}</span>
             </div>
             {order.totals?.addOnTotal > 0 && (
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">ยอดรายการเพิ่มเติม:</span>
+                <span className="text-gray-600 dark:text-gray-400">
+                  ยอดรายการเพิ่มเติม:
+                </span>
                 <span>฿{order.totals.addOnTotal.toLocaleString()}</span>
               </div>
             )}
@@ -408,9 +467,8 @@ export default function OrderDetail() {
           </div>
         </div>
 
-
         <div className="flex gap-3 pt-4 pb-8">
-          {(order.status == "new") && (
+          {order.status == "new" && (
             <button
               onClick={handleRefuseOrder}
               className="flex-1 py-3.5 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 rounded-xl font-bold transition-colors shadow-sm"
@@ -418,20 +476,22 @@ export default function OrderDetail() {
               ❌ ปฏิเสธ
             </button>
           )}
-          {(order.status == "preparing") ? (
+          {order.status == "preparing" ? (
             <button
               onClick={openRiderModal}
               className="flex-[2] py-3.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-sm transition-colors"
             >
               ✅ พร้อมส่ง
             </button>
-          ) : (order.status == "preparing") ? (
+          ) : order.status == "preparing" ? (
             <button
               onClick={openRiderModal}
               className="flex-[2] py-3.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-sm transition-colors"
             >
               เลือกไรเดอร์และเริ่มงาน
             </button>
+          ) : order.status == "ready" ? (
+            <></>
           ) : (
             <button
               onClick={handleConfirmOrder}
@@ -440,21 +500,28 @@ export default function OrderDetail() {
               ✅ รับออเดอร์
             </button>
           )}
-
         </div>
-
       </div>
 
       {/* 🌟 Modal สำหรับแสดงแผนที่ */}
       {isMapModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col h-[80vh] animate-in fade-in zoom-in duration-200">
-
             {/* Modal Header */}
             <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
               <h3 className="font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                <svg
+                  className="w-5 h-5 text-orange-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                  />
                 </svg>
                 สถานที่จัดส่ง
               </h3>
@@ -462,8 +529,18 @@ export default function OrderDetail() {
                 onClick={() => setIsMapModalOpen(false)}
                 className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-full transition-colors"
               >
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-5 h-5 text-gray-600 dark:text-gray-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -477,26 +554,37 @@ export default function OrderDetail() {
                 mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
                 style={{ width: "100%", height: "100%" }}
               >
-
                 <Source id="zone3-source" type="geojson" data={zones.zone3}>
                   <Layer
                     id="zone3-layer"
                     type="fill"
-                    paint={{ "fill-color": "#ef4444", "fill-opacity": 0.06, "fill-outline-color": "#ef4444" }}
+                    paint={{
+                      "fill-color": "#ef4444",
+                      "fill-opacity": 0.06,
+                      "fill-outline-color": "#ef4444",
+                    }}
                   />
                 </Source>
                 <Source id="zone2-source" type="geojson" data={zones.zone2}>
                   <Layer
                     id="zone2-layer"
                     type="fill"
-                    paint={{ "fill-color": "#f59e0b", "fill-opacity": 0.1, "fill-outline-color": "#f59e0b" }}
+                    paint={{
+                      "fill-color": "#f59e0b",
+                      "fill-opacity": 0.1,
+                      "fill-outline-color": "#f59e0b",
+                    }}
                   />
                 </Source>
                 <Source id="zone1-source" type="geojson" data={zones.zone1}>
                   <Layer
                     id="zone1-layer"
                     type="fill"
-                    paint={{ "fill-color": "#10b981", "fill-opacity": 0.12, "fill-outline-color": "#10b981" }}
+                    paint={{
+                      "fill-color": "#10b981",
+                      "fill-opacity": 0.12,
+                      "fill-outline-color": "#10b981",
+                    }}
                   />
                 </Source>
 
@@ -520,11 +608,16 @@ export default function OrderDetail() {
                 )}
 
                 {/* Marker: ตำแหน่งร้าน (สีส้ม) */}
-                <Marker longitude={SHOP_LNG} latitude={SHOP_LAT} anchor="bottom">
+                <Marker
+                  longitude={SHOP_LNG}
+                  latitude={SHOP_LAT}
+                  anchor="bottom"
+                >
                   <div className="relative flex flex-col items-center justify-center cursor-pointer hover:scale-110 transition-transform origin-bottom">
                     {/* วงกลมด้านบน */}
                     <div className="bg-orange-500 rounded-full w-10 h-10 flex items-center justify-center shadow-md border-2 border-white z-10">
-                      <span className="text-xl">🥘</span> {/* ไอคอนกระทะ/ของกิน */}
+                      <span className="text-xl">🥘</span>{" "}
+                      {/* ไอคอนกระทะ/ของกิน */}
                     </div>
                     {/* ติ่งหมุดสามเหลี่ยมชี้ลง */}
                     <div className="w-3 h-3 bg-orange-500 rotate-45 -mt-2 border-b-2 border-r-2 border-white shadow-sm rounded-sm"></div>
@@ -541,7 +634,11 @@ export default function OrderDetail() {
                       {/* วงกลมด้านบน */}
                       <div className="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center shadow-md border-2 border-white z-10">
                         {/* ไอคอนแผนที่ Location */}
-                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          className="w-5 h-5 text-white"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                         </svg>
                       </div>
@@ -557,7 +654,10 @@ export default function OrderDetail() {
             <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row justify-between gap-2">
                 <p className="text-sm text-gray-700 dark:text-gray-300 flex-1">
-                  <span className="font-bold text-gray-900 dark:text-white">ที่อยู่จัดส่ง:</span> {order.shipping?.address}
+                  <span className="font-bold text-gray-900 dark:text-white">
+                    ที่อยู่จัดส่ง:
+                  </span>{" "}
+                  {order.shipping?.address}
                 </p>
                 {/* 🌟 แสดงระยะทาง */}
                 {routeDistance !== null && (
@@ -567,11 +667,9 @@ export default function OrderDetail() {
                 )}
               </div>
             </div>
-
           </div>
         </div>
       )}
-
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -580,7 +678,10 @@ export default function OrderDetail() {
 
             <div className="space-y-2 mb-6">
               {riders.map((rider) => (
-                <label key={rider.uid} className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-gray-100 rounded">
+                <label
+                  key={rider.uid}
+                  className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-gray-100 rounded"
+                >
                   <input
                     type="radio"
                     name="rider"
@@ -595,8 +696,18 @@ export default function OrderDetail() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-600">ยกเลิก</button>
-              <button onClick={handleStartOrder} className="px-4 py-2 bg-green-600 text-white rounded">เริ่มงาน</button>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-gray-600"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleStartOrder}
+                className="px-4 py-2 bg-green-600 text-white rounded"
+              >
+                เริ่มงาน
+              </button>
             </div>
           </div>
         </div>

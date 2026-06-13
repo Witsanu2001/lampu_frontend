@@ -1,7 +1,12 @@
-import { useEffect, useState} from "react";
+import { useEffect, useState } from "react";
 import SelectMaps from "./SelectMaps"; // เปลี่ยน path ให้ตรงกับโฟลเดอร์ของคุณถ้าจำเป็น
 import { useNavigate } from "react-router-dom";
-import { deleteLocationFromDB, getLocationsFromDB, saveLocationToDB, updateLocationInDB } from "../api/api_location.ts";
+import {
+  deleteLocationFromDB,
+  getLocationsFromDB,
+  saveLocationToDB,
+  updateLocationInDB,
+} from "../api/api_location.ts";
 
 interface AddressItem {
   id: string;
@@ -82,14 +87,13 @@ export default function Address() {
     setShowMap(false);
   };
 
-
   useEffect(() => {
     const fetchLocations = async () => {
       const userDataString = localStorage.getItem("userData");
       if (userDataString) {
         const userData = JSON.parse(userDataString);
         const userId = userData.id || userData.uid || "";
-        
+
         if (userId) {
           try {
             // ดึงข้อมูลจากฐานข้อมูลจริง
@@ -201,7 +205,7 @@ export default function Address() {
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบที่อยู่นี้?")) {
       try {
         await deleteLocationFromDB(id); // สั่งลบที่ Backend ก่อน
-        
+
         // เมื่อ Backend ลบสำเร็จ ค่อยอัปเดตหน้าจอ
         const updatedAddresses = addresses.filter((addr) => addr.id !== id);
         setAddresses(updatedAddresses);
@@ -222,17 +226,27 @@ export default function Address() {
     syncPrimaryAddress(updatedAddresses);
   };
 
+  // ใน Address.tsx
+  const handleSelectAddress = async (addr: AddressItem) => {
+    // 1. ตั้งเป็นที่อยู่หลัก
+    handleSetDefault(addr.id);
+
+    // 2. ดีเลย์เล็กน้อยเพื่อให้ UI อัปเดตสถานะการเลือกก่อนแล้วค่อยเด้ง
+    setTimeout(() => {
+      navigate("/orders/payment");
+    }, 100);
+  };
+
   return (
     <div className="h-full overflow-y-auto py-10 px-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex justify-between items-center mb-8">
           <button
-            onClick={() => navigate("/payment")}
-            className="flex items-center justify-center w-10 h-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300"
-            aria-label="กลับไปหน้าหลัก"
+            onClick={() => navigate("/orders/payment")}
+            className="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 mb-3"
           >
             <svg
-              className="w-6 h-6"
+              className="w-4 h-4 mr-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -244,10 +258,9 @@ export default function Address() {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
+            กลับไปหน้ารายการออเดอร์
           </button>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-            ที่อยู่จัดส่งของคุณ
-          </h1>
+
           {!showForm && addresses.length < 3 && (
             <button
               onClick={() => handleOpenForm()}
@@ -276,7 +289,8 @@ export default function Address() {
               addresses.map((addr) => (
                 <div
                   key={addr.id}
-                  className={`p-5 rounded-2xl border-2 transition-all ${
+                  onClick={() => handleSelectAddress(addr)} // 🌟 เพิ่มอันนี้: กดที่การ์ดเพื่อเลือก
+                  className={`p-5 rounded-2xl border-2 transition-all cursor-pointer hover:shadow-lg ${
                     addr.isDefault
                       ? "border-orange-500 bg-orange-50/50 dark:bg-orange-900/10 shadow-md"
                       : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm"
@@ -293,7 +307,12 @@ export default function Address() {
                         </span>
                       )}
                     </div>
-                    <div className="flex gap-2">
+
+                    {/* 🌟 สำคัญ: ใช้ stopPropagation() ป้องกันการ Trigger กดเลือกที่อยู่ตอนกดแก้ไข/ลบ */}
+                    <div
+                      className="flex gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <button
                         onClick={() => handleOpenForm(addr)}
                         className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 font-semibold transition-colors"

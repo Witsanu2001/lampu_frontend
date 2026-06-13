@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { settingsDataRoutes } from "../modules/settingsData/route";
 import { loginRoutes } from "../modules/login/route";
 import { orderRoutes } from "../modules/order/route";
@@ -9,8 +9,22 @@ import { paymentRoutes } from "../modules/payment/route";
 import { orderUserRoutes } from "../modules/order_user/route";
 
 export const AppRoutes = ({ user, setUser }: { user: any, setUser: any }) => {
+
+  console.log('xxxxxx',user)
+  console.log("User Role:", user?.role);
+
   return (
     <Routes>
+      <Route
+        path="/"
+        element={
+          user ? (
+            user.role === "admin" ? <Navigate to="/orders" replace /> : <Navigate to="/home" replace />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
       {loginRoutes(user, setUser)}
       {homeRoutes()}
       {orderRoutes()}

@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { useCart } from "../../shared/context/CartContext";
 import { useNavigate } from "react-router-dom";
+import { addOrders, getAddOnMenus, getFreshToken } from "../api/api_order";
 
 export default function Payment() {
   const navigate = useNavigate();
@@ -19,47 +20,29 @@ export default function Payment() {
 
   const mainItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const [stoveCount, setStoveCount] = useState(1);
-  const [panCount, setPanCount] = useState(1);
+  const [needEquipment, setNeedEquipment] = useState(false);
+  const [stoveCount, setStoveCount] = useState(0);
+  const [panCount, setPanCount] = useState(0);
   const [charcoalCount, setCharcoalCount] = useState(0);
+
   useEffect(() => {
-    const fetchAddOnMenus = async () => {
+    let isMounted = true;
+    const loadMenus = async () => {
       try {
-        const token =
-          localStorage.getItem("auth_token") ||
-          localStorage.getItem("firebase_token") ||
-          "";
-        const response = await fetch(
-          "https://api-gateway-879165280409.asia-southeast1.run.app/api/orders/menus_type/additional",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
-
-        if (response.ok) {
-          const json = await response.json();
-          // แปลงข้อมูลให้อยู่ในโครงสร้างเดียวกับ UI เดิม
-          const formatted = (json.data || []).map((item: any) => ({
-            id: item.id,
-            name: item.name_menu,
-            price: item.price_menu,
-            image: item.image_url_menu,
-            available: item.available,
-          }));
-
-          // เลือกแสดงผลเฉพาะเมนูที่พร้อมขาย (available === true)
-          setAddOnMenus(formatted.filter((item: any) => item.available));
+        const token = await getFreshToken();
+        const data = await getAddOnMenus(token);
+        if (isMounted) {
+          setAddOnMenus(data.filter((item: any) => item.available));
+          setIsLoadingAddOns(false);
         }
-      } catch (error) {
-        console.error("Error fetching add-on menus:", error);
-      } finally {
-        setIsLoadingAddOns(false);
+      } catch (err) {
+        if (isMounted) setIsLoadingAddOns(false);
       }
     };
-
-    fetchAddOnMenus();
+    loadMenus();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // ดึงข้อมูลที่อยู่จาก LocalStorage
@@ -78,11 +61,13 @@ export default function Payment() {
   const [isInitialized, setIsInitialized] = useState(false);
   useEffect(() => {
     if (mainItemsCount > 0 && !isInitialized) {
-      setStoveCount(mainItemsCount);
-      setPanCount(mainItemsCount);
+      if (needEquipment) {
+        setStoveCount(mainItemsCount);
+        setPanCount(mainItemsCount);
+      }
       setIsInitialized(true);
     }
-  }, [mainItemsCount, isInitialized]);
+  }, [mainItemsCount, isInitialized, needEquipment]);
 
   const handleIncreaseMainItem = (id: string, currentQty: number) => {
     updateQuantity(id, currentQty + 1);
@@ -134,10 +119,82 @@ export default function Payment() {
     }
   };
 
-  const handleHomeImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (
+    file: File,
+    maxWidth: number = 1024,
+    quality: number = 0.7,
+  ): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+
+          // คำนวณขนาดภาพ (Resize ถ้าภาพใหญ่เกิน)
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // แปลงเป็น Blob (Quality 0.7 คือประมาณ 70% ของคุณภาพเดิม)
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name, {
+                  type: "image/jpeg",
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              } else {
+                reject(new Error("Canvas is empty"));
+              }
+            },
+            "image/jpeg",
+            quality,
+          );
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
+  };
+
+  const handleHomeImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setHomeImageFile(file);
+    if (!file) return;
+
+    // ตรวจสอบขนาดไฟล์ก่อน (ถ้าเกิน 1MB ค่อยบีบ)
+    const maxSizeInBytes = 1 * 1024 * 1024; // 1MB
+
+    try {
+      if (file.size > maxSizeInBytes) {
+        console.log("ไฟล์ใหญ่เกิน 1MB กำลังบีบอัด...");
+        const compressed = await compressImage(file);
+        console.log(
+          "ขนาดไฟล์หลังบีบอัด:",
+          (compressed.size / 1024 / 1024).toFixed(2),
+          "MB",
+        );
+        setHomeImageFile(compressed);
+      } else {
+        setHomeImageFile(file);
+      }
+    } catch (error) {
+      console.error("เกิดข้อผิดพลาดในการบีบอัดรูป:", error);
+      alert("ไม่สามารถประมวลผลรูปภาพได้");
     }
   };
 
@@ -174,11 +231,13 @@ export default function Payment() {
     0,
   );
 
-  const extraStoves = Math.max(0, stoveCount - mainItemsCount);
-  const extraPans = Math.max(0, panCount - mainItemsCount);
+  const extraStoves = needEquipment
+    ? Math.max(0, stoveCount - mainItemsCount)
+    : 0;
+  const extraPans = needEquipment ? Math.max(0, panCount - mainItemsCount) : 0;
   const stoveFee = extraStoves * 30;
   const panFee = extraPans * 20;
-  const charcoalFee = charcoalCount * 10;
+  const charcoalFee = needEquipment ? charcoalCount * 10 : 0;
 
   const grandTotal =
     cartTotal + shippingFee + addOnTotal + charcoalFee + stoveFee + panFee;
@@ -223,6 +282,7 @@ export default function Payment() {
         subtotal: item.price * item.quantity,
       })),
       equipment: {
+        needEquipment,
         stoveCount,
         panCount,
         charcoalCount,
@@ -252,57 +312,47 @@ export default function Payment() {
       },
     };
 
+    const formData = new FormData();
+    formData.append("order", JSON.stringify(orderData));
+    formData.append("user_id", userId);
+
+    if (paymentMethod === "promptpay" && slipFile) {
+      formData.append("slip", slipFile);
+    }
+    if (homeImageFile) {
+      formData.append("home_image", homeImageFile);
+    }
+
     try {
-      const formData = new FormData();
-      formData.append("order", JSON.stringify(orderData));
-
-      // ✨ 3. แนบ user_id เข้าไปใน FormData
-      formData.append("user_id", userId);
-
-      if (paymentMethod === "promptpay" && slipFile) {
-        formData.append("slip", slipFile);
-      }
-
-      if (homeImageFile) {
-        formData.append("home_image", homeImageFile);
-      }
-
-      // 💡 แนะนำ: ถ้าทำระบบ Token อัตโนมัติไว้แล้ว อย่าลืมเปลี่ยนเป็น await getFreshToken() นะครับ
-      const token =
-        localStorage.getItem("auth_token") ||
-        localStorage.getItem("firebase_token") ||
-        "";
-      const response = await fetch(
-        "https://api-gateway-879165280409.asia-southeast1.run.app/api/orders/orders_add",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        },
-      );
-
-      if (response.ok) {
-        clearCart();
-        setSelectedAddOns([]);
-        setStoveCount(1);
-        setPanCount(1);
-        setCharcoalCount(0);
-        setSlipPreview(null);
-        setSlipFile(null);
-        setHomeImageFile(null);
-        alert("ยืนยันการสั่งซื้อสำเร็จ! ขอบคุณที่ใช้บริการครับ/ค่ะ 🥢");
-        navigate("/");
-      } else {
-        const errorData = await response.json();
-        alert(
-          `เกิดข้อผิดพลาด: ${errorData.error || "ไม่สามารถส่งคำสั่งซื้อได้"}`,
-        );
-      }
-    } catch (error) {
+      const token = await getFreshToken();
+      await addOrders(formData, token);
+      clearCart();
+      setSelectedAddOns([]);
+      setStoveCount(1);
+      setPanCount(1);
+      setCharcoalCount(0);
+      setSlipPreview(null);
+      setSlipFile(null);
+      setHomeImageFile(null);
+      alert("ยืนยันการสั่งซื้อสำเร็จ! ขอบคุณที่ใช้บริการครับ/ค่ะ 🥢");
+      navigate("/");
+    } catch (error: any) {
+      // ตรงนี้จะดักจับ Error ที่โยนมาจาก throw new Error ใน addOrders
       console.error("Error submitting order:", error);
-      alert("เกิดข้อผิดพลาดในการส่งคำสั่งซื้อ กรุณาลองใหม่ครับ/ค่ะ");
+      alert(`เกิดข้อผิดพลาด: ${error.message || "ไม่สามารถส่งคำสั่งซื้อได้"}`);
+    }
+  };
+
+  const handleToggleEquipment = (need: boolean) => {
+    setNeedEquipment(need);
+    if (!need) {
+      setStoveCount(0);
+      setPanCount(0);
+      setCharcoalCount(0);
+    } else {
+      setStoveCount(mainItemsCount);
+      setPanCount(mainItemsCount);
+      setCharcoalCount(0);
     }
   };
 
@@ -330,7 +380,7 @@ export default function Payment() {
               />
             </svg>
           </button>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-white m-0">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-1">
             การชำระเงิน
           </h1>
         </div>
@@ -349,50 +399,71 @@ export default function Payment() {
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
                   <span>📍</span> ที่อยู่จัดส่ง
                 </h2>
-                <button
+                {/* <button
                   onClick={() => navigate("/address")}
                   className="text-sm text-blue-600 dark:text-blue-400 font-semibold hover:underline transition-colors"
                 >
                   {shippingAddress ? "แก้ไขที่อยู่" : "+ เพิ่มที่อยู่จัดส่ง"}
-                </button>
+                </button> */}
               </div>
 
               {shippingAddress ? (
-                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-700">
-                  <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-                    {shippingAddress.details || shippingAddress.address}
-                  </p>
-                  {shippingAddress.location && (
-                    <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-3 flex items-center gap-1">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      พิกัด: {shippingAddress.location.lat.toFixed(5)},{" "}
-                      {shippingAddress.location.lng.toFixed(5)}
+                <div
+                  onClick={() => navigate("/address")}
+                  className="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-700 cursor-pointer hover:ring-2 hover:ring-orange-400 dark:hover:ring-orange-500 transition-all active:scale-95"
+                >
+                  {/* ฝั่งซ้าย: เนื้อหาที่อยู่ */}
+                  <div className="flex-1 mr-4">
+                    <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                      {shippingAddress.details || shippingAddress.address}
                     </p>
-                  )}
+                    {shippingAddress.location && (
+                      <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-3 flex items-center gap-1">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        พิกัด: {shippingAddress.location.lat.toFixed(5)},{" "}
+                        {shippingAddress.location.lng.toFixed(5)}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* ฝั่งขวา: ลูกศร > */}
+                  <div className="text-gray-400">
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
                 </div>
               ) : (
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-800/30 text-center">
-                  <p className="text-red-500 dark:text-red-400 font-medium mb-2">
-                    คุณยังไม่ได้ระบุที่อยู่จัดส่ง
+                // ส่วนกรณีที่ยังไม่มีที่อยู่ (ถ้าต้องการให้กดไปเพิ่มที่อยู่ได้ด้วย ก็ใส่ onclick เหมือนกันได้เลยครับ)
+                <div
+                  onClick={() => navigate("/address")}
+                  className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-800/30 text-center cursor-pointer hover:ring-2 hover:ring-red-400 transition-all"
+                >
+                  <p className="text-red-500 dark:text-red-400 font-medium">
+                    คุณยังไม่ได้ระบุที่อยู่จัดส่ง (กดเพื่อเพิ่มที่อยู่)
                   </p>
-                  <button
-                    onClick={() => navigate("/address")}
-                    className="px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-500/20 dark:hover:bg-red-500/40 text-red-600 dark:text-red-400 text-sm font-bold rounded-lg transition-colors"
-                  >
-                    ไปเพิ่มที่อยู่เดี๋ยวนี้
-                  </button>
                 </div>
               )}
 
@@ -646,109 +717,127 @@ export default function Payment() {
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
                 อุปกรณ์สำหรับปิ้งย่าง 🍳
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                  <div>
-                    <span className="block text-gray-800 dark:text-white font-medium">
-                      เตาย่าง
-                    </span>
-                    {stoveCount <= mainItemsCount ? (
-                      <span className="block text-xs text-green-500">
-                        ยืมฟรี (โควต้า {mainItemsCount} เตา)
-                      </span>
-                    ) : (
-                      <span className="block text-xs text-red-500">
-                        + ฿30 / เตา (ส่วนเกิน)
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() =>
-                        setStoveCount((prev) => Math.max(0, prev - 1))
-                      }
-                      className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
-                    >
-                      -
-                    </button>
-                    <span className="text-sm font-semibold w-4 text-center dark:text-white">
-                      {stoveCount}
-                    </span>
-                    <button
-                      onClick={() => setStoveCount((prev) => prev + 1)}
-                      className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
 
-                <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                  <div>
-                    <span className="block text-gray-800 dark:text-white font-medium">
-                      กระทะ
-                    </span>
-                    {panCount <= mainItemsCount ? (
-                      <span className="block text-xs text-green-500">
-                        ยืมฟรี (โควต้า {mainItemsCount} ใบ)
-                      </span>
-                    ) : (
-                      <span className="block text-xs text-red-500">
-                        + ฿20 / ใบ (ส่วนเกิน)
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() =>
-                        setPanCount((prev) => Math.max(0, prev - 1))
-                      }
-                      className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
-                    >
-                      -
-                    </button>
-                    <span className="text-sm font-semibold w-4 text-center dark:text-white">
-                      {panCount}
-                    </span>
-                    <button
-                      onClick={() => setPanCount((prev) => prev + 1)}
-                      className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                  <div>
-                    <span className="block text-gray-800 dark:text-white font-medium">
-                      ถ่าน
-                    </span>
-                    <span className="block text-xs text-red-500">
-                      + ฿10 / ถุง
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() =>
-                        setCharcoalCount((prev) => Math.max(0, prev - 1))
-                      }
-                      className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
-                    >
-                      -
-                    </button>
-                    <span className="text-sm font-semibold w-4 text-center dark:text-white">
-                      {charcoalCount}
-                    </span>
-                    <button
-                      onClick={() => setCharcoalCount((prev) => prev + 1)}
-                      className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
+              {/* ✨ เพิ่มตัวเลือก Radio Buttons ตรงนี้ */}
+              <div className="flex items-center mb-6 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-700">
+                <label className="flex items-center gap-3 cursor-pointer w-full">
+                  <input
+                    type="checkbox"
+                    checked={needEquipment}
+                    onChange={(e) => handleToggleEquipment(e.target.checked)}
+                    className="w-5 h-5 text-emerald-500 rounded border-gray-300 focus:ring-emerald-500 transition-colors cursor-pointer"
+                  />
+                  <span className="text-gray-800 dark:text-white font-medium">
+                    รับเตาและกระทะ (ยืมฟรีตามจำนวนชุด)
+                  </span>
+                </label>
               </div>
+
+              {needEquipment && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-down">
+                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <div>
+                      <span className="block text-gray-800 dark:text-white font-medium">
+                        เตาย่าง
+                      </span>
+                      {stoveCount <= mainItemsCount ? (
+                        <span className="block text-xs text-green-500">
+                          ยืมฟรี (โควต้า {mainItemsCount} เตา)
+                        </span>
+                      ) : (
+                        <span className="block text-xs text-red-500">
+                          + ฿30 / เตา (ส่วนเกิน)
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          setStoveCount((prev) => Math.max(0, prev - 1))
+                        }
+                        className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
+                      >
+                        -
+                      </button>
+                      <span className="text-sm font-semibold w-4 text-center dark:text-white">
+                        {stoveCount}
+                      </span>
+                      <button
+                        onClick={() => setStoveCount((prev) => prev + 1)}
+                        className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <div>
+                      <span className="block text-gray-800 dark:text-white font-medium">
+                        กระทะ
+                      </span>
+                      {panCount <= mainItemsCount ? (
+                        <span className="block text-xs text-green-500">
+                          ยืมฟรี (โควต้า {mainItemsCount} ใบ)
+                        </span>
+                      ) : (
+                        <span className="block text-xs text-red-500">
+                          + ฿20 / ใบ (ส่วนเกิน)
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          setPanCount((prev) => Math.max(0, prev - 1))
+                        }
+                        className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
+                      >
+                        -
+                      </button>
+                      <span className="text-sm font-semibold w-4 text-center dark:text-white">
+                        {panCount}
+                      </span>
+                      <button
+                        onClick={() => setPanCount((prev) => prev + 1)}
+                        className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <div>
+                      <span className="block text-gray-800 dark:text-white font-medium">
+                        ถ่าน
+                      </span>
+                      <span className="block text-xs text-red-500">
+                        + ฿10 / ถุง
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          setCharcoalCount((prev) => Math.max(0, prev - 1))
+                        }
+                        className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
+                      >
+                        -
+                      </button>
+                      <span className="text-sm font-semibold w-4 text-center dark:text-white">
+                        {charcoalCount}
+                      </span>
+                      <button
+                        onClick={() => setCharcoalCount((prev) => prev + 1)}
+                        className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 6. สรุปยอดรวมทั้งหมด */}

@@ -18,6 +18,7 @@ import { menuConfig, type MenuItem } from "./menu";
 import { postLineAuth, postUsersSync } from "../../modules/api/api_login";
 import { AppRoutes } from "../../app/routes";
 import { setToken, removeToken } from "../infra/auth/token";
+import BottomNav from "./BottomNav";
 
 const LIFF_ID = "2010209102-zHsx4M0r";
 
@@ -88,14 +89,14 @@ export default function App() {
 
         const profile = await liff.getProfile();
         const decodedToken = liff.getDecodedIDToken() as any;
-        
+
         let lineUser: any = {
           uid: profile.userId,
           email: decodedToken?.email || "",
           displayName: profile.displayName,
           photoURL: profile.pictureUrl,
           provider: "line",
-          role: "user" 
+          role: profile.role,
         };
 
         const firebaseToken = await userCredential.user.getIdToken(true);
@@ -112,9 +113,12 @@ export default function App() {
 
           lineUser = {
             ...lineUser,
-            role: syncedUser?.role || "user",
+            role: syncedUser?.role,
           };
-          console.log("✅ ล็อกอิน LINE + บันทึกสิทธิ์สำเร็จ! Role:", lineUser.role);
+          console.log(
+            "✅ ล็อกอิน LINE + บันทึกสิทธิ์สำเร็จ! Role:",
+            lineUser.role,
+          );
         }
 
         setUser(lineUser);
@@ -123,7 +127,7 @@ export default function App() {
     } catch (err) {
       console.error("LINE Auth Error:", err);
       if (!liff.isInClient()) {
-         liff.logout();
+        liff.logout();
       }
       localStorage.removeItem("userData");
       setUser(null);
@@ -131,47 +135,51 @@ export default function App() {
   };
 
   // 2. ติดตามสถานะ Firebase (Email / Facebook)
+  const [, setIsAuthLoading] = useState(true);
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+      setIsAuthLoading(true); // เริ่มโหลด
+
       if (currentUser) {
-        // 🎯 ดึงข้อมูลเดิมในคลังมาตรวจสอบก่อนเพื่อรักษาค่า role ปัจจุบันไว้
-        const savedUserStr = localStorage.getItem("userData");
-        let existingRole = "user";
+        try {
+          // 1. ดึง Token ใหม่เสมอ
+          const idToken = await currentUser.getIdToken(true);
+          setToken(idToken, 24);
 
-        if (savedUserStr) {
-          try {
-            const parsed = JSON.parse(savedUserStr);
-            if (parsed.uid === currentUser.uid) {
-              existingRole = parsed.role || "user";
-            }
-          } catch (e) {
-            console.error(e);
+          // 2. เรียก API เพื่อ Sync ข้อมูลและ Role ล่าสุดจาก Backend
+          // (แนะนำให้ใช้ฟังก์ชันที่คุณมีอยู่ เช่น postUsersSync)
+          const syncRes = await postUsersSync({
+            uid: currentUser.uid,
+            email: currentUser.email,
+            displayName: currentUser.displayName,
+            photoURL: currentUser.photoURL,
+            provider: "firebase",
+          });
+
+          if (syncRes.ok) {
+            const resData = await syncRes.json();
+            const syncedUser = resData.data; // ตรงนี้จะได้ role ที่ถูกต้องจาก Database
+
+            const finalUserData = {
+              ...syncedUser,
+              provider: "firebase",
+            };
+
+            setUser(finalUserData);
+            localStorage.setItem("userData", JSON.stringify(finalUserData));
           }
+        } catch (e) {
+          console.error("Sync Error:", e);
         }
-
-        const userDataToSave = {
-          uid: currentUser.uid,
-          email: currentUser.email,
-          displayName: currentUser.displayName,
-          photoURL: currentUser.photoURL,
-          provider: "firebase",
-          role: existingRole, // 🎯 นำค่าสิทธิ์เดิมกลับมาใส่ ห้ามปล่อยเป็นค่าว่าง
-        };
-
-        // เก็บ token ไว้ใน localStorage พร้อม expiry time
-        const idToken = await currentUser.getIdToken(true);
-        setToken(idToken, 24); // 24 hours expiry
-
-        setUser(userDataToSave);
-        localStorage.setItem("userData", JSON.stringify(userDataToSave));
       } else {
-        setUser((prevUser: any) => {
-          if (prevUser?.provider === "line") return prevUser;
-          localStorage.removeItem("userData");
-          removeToken(); // ลบ token เมื่อ logout
-          return null;
-        });
+        // Logout
+        setUser(null);
+        localStorage.removeItem("userData");
+        removeToken();
       }
+
+      setIsAuthLoading(false); // Sync เสร็จแล้ว
     });
     return () => unsubscribe();
   }, []);
@@ -223,35 +231,7 @@ export default function App() {
       {/* 1. Header */}
       {user && !isPaymentPage && <Header user={user} setUser={setUser} />}
 
-      {/* 2. Mobile Menu Bar (แสดงเฉพาะมือถือและแท็บเล็ต) */}
-      {user && !isPaymentPage && (
-        <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-50 bg-emerald-50 dark:bg-emerald-900/20 border-t border-emerald-100 dark:border-emerald-800 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] flex justify-around items-center p-2">
-          {menuConfig.filter(hasPermission).map((item, index) => {
-            const isActive = location.pathname === item.to;
-            return (
-              <Link
-                key={index}
-                to={item.to}
-                className={`flex flex-col items-center p-2 rounded-lg transition-all duration-200 hover:scale-110 ${
-                  isActive
-                    ? "bg-emerald-200 dark:bg-emerald-700/50 text-emerald-800 dark:text-emerald-300"
-                    : "text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-800/30"
-                }`}
-              >
-                {/* 🎯 แสดงผลเฉพาะไอคอน! (ถ้าระบุรูป png จะเอารูปมาโชว์ ถ้าไม่มีรูปจะเอา Emoji มาโชว์) */}
-                <img
-                  src={item.iconUrl}
-                  alt="" /* ปล่อยว่างเพื่อไม่ให้มีตัวหนังสือโผล่มากวนใจตอนรูปไม่ขึ้น */
-                  className="w-7 h-7 object-contain drop-shadow-sm"
-                />
-              </Link>
-            );
-          })}
-        </nav>
-      )}
-
       <div className="flex flex-1 overflow-hidden">
-        {/* 2. Desktop Sidebar (แสดงเฉพาะหน้าจอคอมพิวเตอร์ขนาดใหญ่) */}
         {user && !isPaymentPage && (
           <aside className="hidden xl:flex flex-col w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-6 gap-8 overflow-y-auto">
             <div className="flex flex-col gap-6">
@@ -280,10 +260,16 @@ export default function App() {
 
         {/* 3. Main Content */}
         <main
-          className={`flex-1 overflow-y-auto relative ${!isPaymentPage ? "pb-20 xl:pb-0" : ""}`}
+          className={`flex-1 overflow-y-auto ${isPaymentPage ? "pb-0" : "pb-[100px]"} md:pb-0 scroll-smooth`}
         >
           <AppRoutes user={user} setUser={setUser} />
         </main>
+
+        <BottomNav
+          user={user}
+          isPaymentPage={isPaymentPage}
+          hasPermission={hasPermission}
+        />
       </div>
     </div>
   );

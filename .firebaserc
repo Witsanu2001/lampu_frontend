@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "lampu-5a178"
-  }
+  },
+  "targets": {
+    "lampu-5a178": {
+      "hosting": {
+        "frontend": [
+          "lampu-frontend"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

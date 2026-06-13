@@ -1,20 +1,14 @@
 ﻿/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/modules/order/Order.tsx
 
-import { useEffect, useState } from "react";
+import { useEffect,useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getOrderUserById } from "../api/api_order";
+import {getOrderUserById } from "../api/api_order";
 import type { Order } from "../const/order";
-import { onChildAdded, onChildChanged, ref } from "firebase/database";
+import {onValue, ref } from "firebase/database";
 import { db } from "../const/firebase";
 
-type OrderStatus =
-  | "new"
-  | "pending"
-  | "preparing"
-  | "ready"
-  | "shipping"
-  | "delivered";
+type OrderStatus = "new" | "preparing" | "ready" | "shipping" | "delivered";
 
 const getStatusConfig = (status: OrderStatus) => {
   const configs = {
@@ -66,51 +60,52 @@ export default function OrderUserList() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // โหลดข้อมูลครั้งแรกตามปกติ
-    const fetchOrders = async () => {
+    let isMounted = true;
+    let isFirstFirebaseLoad = true; // ✨ ตัวแปรพระเอก: ป้องกัน Firebase ยิง API ตอนเปิดหน้าเว็บ
+    let debounceTimer: ReturnType<typeof setTimeout>;
+
+    // ฟังก์ชันสำหรับเรียก API (เขียนไว้ที่เดียว จะได้ไม่สับสน)
+    const fetchAPI = async () => {
       try {
         const data = await getOrderUserById();
-        setOrders(Array.isArray(data) ? data : []);
+        if (isMounted) {
+          setOrders(Array.isArray(data) ? data : []);
+        }
       } catch (err) {
-        setError("Failed to load orders");
+        if (isMounted) setError("Failed to load orders");
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
-    fetchOrders();
 
-    // ✨ 2. สร้าง Listener ดักฟังการอัปเดตจาก RTDB
+    // 1. เปิดหน้าเว็บมาปุ๊บ สั่งโหลด API เลย 1 ครั้ง
+    fetchAPI();
+
+    // 2. ใช้ onValue ดักฟังข้อมูล "ทั้งก้อน"
     const liveOrdersRef = ref(db, "live_orders");
-
-    // กรณีเปลี่ยนสถานะ (เช่น ร้านกดรับออเดอร์ หรือ ไรเดอร์ส่งเสร็จ)
-    const unsubscribeChanged = onChildChanged(liveOrdersRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data && data.order_id) {
-        // อัปเดตสถานะของออเดอร์นั้นๆ ใน State โดยตรง
-        setOrders((prevOrders) =>
-          prevOrders.map((o) =>
-            o.id === data.order_id ? { ...o, status: data.status } : o,
-          ),
-        );
+    
+    const unsubscribe = onValue(liveOrdersRef, () => {
+      // 🛑 เมื่อ onValue ทำงานครั้งแรกสุด (ตอนเพิ่งเชื่อมต่อติด) 
+      // เราจะ "เตะทิ้ง" ทันที เพราะเราใช้ fetchAPI() โหลดไปแล้ว ไม่ต้องให้มันเรียกซ้ำ
+      if (isFirstFirebaseLoad) {
+        isFirstFirebaseLoad = false;
+        return; 
       }
+
+      // 🟢 ถ้าหลุดมาถึงบรรทัดนี้ได้ แปลว่ามีการเปลี่ยนแปลงจริงๆ (มีคนสั่งอาหารเพิ่ม หรือเปลี่ยนสถานะ)
+      // onValue จะทำงานแค่ 1 ครั้งถ้วน! เราก็แค่หน่วงเวลาไว้ 1 วินาทีแล้วดึง API ได้เลย
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        console.log("🔥 Firebase มีการขยับ! เรียก API ก้อนใหม่...");
+        fetchAPI();
+      }, 1000);
     });
 
-    // กรณีมีออเดอร์ใหม่เข้ามา (คุณอาจจะให้มันดึง fetchOrders ใหม่ หรือขึ้นแจ้งเตือนก็ได้)
-    const unsubscribeAdded = onChildAdded(liveOrdersRef, (snapshot) => {
-      const data = snapshot.val();
-      // ตรวจสอบว่าไม่ใช่ออเดอร์ที่มีอยู่แล้ว ถึงจะโหลดใหม่ (เพื่อป้องกันการโหลดซ้ำตอนเปิดหน้าเว็บครั้งแรก)
-      setOrders((prev) => {
-        if (!prev.find((o) => o.id === data.order_id)) {
-          fetchOrders(); // ดึงข้อมูลใหม่
-        }
-        return prev;
-      });
-    });
-
-    // ✨ 3. Cleanup function เมื่อออกจากหน้านี้
+    // ล้างข้อมูลเมื่อปิดหน้าเว็บ
     return () => {
-      unsubscribeChanged();
-      unsubscribeAdded();
+      isMounted = false;
+      unsubscribe();
+      clearTimeout(debounceTimer);
     };
   }, []);
 

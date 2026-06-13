@@ -108,6 +108,8 @@ git checkout dev
 npm run build
 firebase deploy --only hosting
 
+firebase deploy --only hosting:frontend
+
 เคลียข้อมูลที่ commit ไป > git reset origin/main
 
 
