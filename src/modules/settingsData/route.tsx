@@ -1,6 +1,6 @@
 import { Route } from "react-router-dom";
 import Dashboard from "./dashboards/Dashboard";
-import UserSetting from "./users/ีUserSetting";
+import UserSetting from "./users/UserSetting";
 import MenuSetting from "./menu/MenuSetting";
 import OrderSetting from "./orders/OrderSetting";
 import { ProtectedRoute } from "../../shared/middlewares/ProtectedRoute";

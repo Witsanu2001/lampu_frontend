@@ -19,7 +19,7 @@ export default function Header({ user, setUser }: HeaderProps) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isBouncing, setIsBouncing] = useState(false);
   const navigate = useNavigate();
-  
+
   const LOGO_URL =
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSFvdyWq2xH0rP3uHBFHY6WP5tKMUx74VJ8g&s";
 
@@ -152,9 +152,16 @@ export default function Header({ user, setUser }: HeaderProps) {
           <div className="flex items-center gap-2">
             {user?.photoURL && (
               <img
-                src={user.photoURL}
+                src={user.photoURL || "/default-avatar.png"} // ใช้รูป default ถ้า photoURL ไม่มี
                 alt="Profile"
-                className={`w-9 h-9 rounded-full object-cover border-2 transition-colors duration-200 ${user.provider === "line" ? "border-[#06C755]" : "border-blue-500"}`}
+                className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                onError={(e: any) => {
+                  // ถ้าโหลดรูปไม่ขึ้น ให้สลับไปใช้รูป Placeholder หรือตัวอักษรย่อ
+                  e.target.onerror = null;
+                  e.target.src =
+                    "https://ui-avatars.com/api/?name=" +
+                    (user.displayName || "U");
+                }}
               />
             )}
             <span className="text-sm font-medium text-gray-800 dark:text-gray-100 hidden sm:block">
@@ -166,8 +173,22 @@ export default function Header({ user, setUser }: HeaderProps) {
             onClick={handleLogout}
             className="flex items-center justify-center p-2 md:px-3 md:py-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 border border-gray-200 dark:border-gray-600 rounded-md transition-all"
           >
-            <span className="hidden md:block text-[13px] font-bold">ออกจากระบบ</span>
-            <svg className="w-6 h-6 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            <span className="hidden md:block text-[13px] font-bold">
+              ออกจากระบบ
+            </span>
+            <svg
+              className="w-6 h-6 md:hidden"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
           </button>
         </div>
       </header>

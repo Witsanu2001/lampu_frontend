@@ -4,7 +4,8 @@
 import { useState, useEffect } from "react";
 import { useCart } from "../../shared/context/CartContext";
 import { useNavigate } from "react-router-dom";
-import { addOrders, getAddOnMenus, getFreshToken } from "../api/api_order";
+import { addOrders, getAddOnMenus } from "../api/api_order";
+import { getFreshToken } from "../../shared/infra/auth/token";
 
 export default function Payment() {
   const navigate = useNavigate();

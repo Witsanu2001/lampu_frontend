@@ -1,21 +1,6 @@
-import { auth } from "../const/firebase";
+import { getFreshToken } from "../../shared/infra/auth/token";
 
 const apiUrl = import.meta.env.VITE_API_URL;
-
-async function getFreshToken(): Promise<string> {
-  // ถ้า Firebase โหลดเสร็จและมี user ล็อกอินอยู่
-  if (auth.currentUser) {
-    // คำสั่งนี้จะเช็คอายุ Token ให้ ถ้าหมดอายุ มันจะดึงตัวใหม่ให้ทันทีก่อน return
-    return await auth.currentUser.getIdToken();
-  }
-
-  // จังหวะหน้าเว็บเพิ่งรีเฟรช auth.currentUser อาจจะยังโหลดไม่เสร็จ ให้ fallback ไปใช้ localStorage ขัดตาทัพ
-  return (
-    localStorage.getItem("auth_token") ||
-    localStorage.getItem("firebase_token") ||
-    ""
-  );
-}
 
 // 🌟 1. สร้าง Interface เพื่อบอกโครงสร้างข้อมูลที่ได้จาก Backend
 export interface Menu {

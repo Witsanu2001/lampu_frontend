@@ -1,7 +1,8 @@
+/* eslint-disable prefer-const */
 /* eslint-disable react-hooks/immutability */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/shared/ui/App.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { auth } from "../../modules/const/firebase";
 import {
@@ -30,43 +31,44 @@ export default function App() {
 
   const location = useLocation();
   const isPaymentPage = location.pathname === "/orders/payment";
+  const [isAppLoading, setIsAppLoading] = useState(true);
+  const isInitialized = useRef(false);
 
   // 1. ตรวจสอบการโหลดและการเข้าสู่ระบบของ LINE LIFF
   useEffect(() => {
+    if (isInitialized.current) return;
+    isInitialized.current = true;
+
     const initLiff = async () => {
       try {
         await liff.init({ liffId: LIFF_ID });
+
         if (liff.isLoggedIn()) {
-          // 🎯 เช็กว่ามี userData ใน localStorage อยู่แล้วหรือไม่
           const savedUser = localStorage.getItem("userData");
           if (savedUser) {
             try {
               const parsedUser = JSON.parse(savedUser);
               if (parsedUser.provider === "line") {
                 setUser(parsedUser);
-                console.log(
-                  "✅ ใช้ข้อมูลผู้ใช้เดิมจาก localStorage (LIFF session ยังอยู่)",
-                );
+                setIsAppLoading(false);
                 return;
               }
-            } catch (parseErr) {
-              console.error("Parse userData error:", parseErr);
+            } catch (e) {
+              console.error(e);
             }
           }
-          // ถ้าไม่มี userData หรือไม่ใช่ LINE provider ให้ลอง authenticate ใหม่
-          handleLineUserData();
+          await handleLineUserData();
+          setIsAppLoading(false);
         } else {
-          // 🎯 ถ้า LIFF ยังไม่ login แต่อยู่ใน LINE environment ให้ login อัตโนมัติ
-          // เพื่อป้องกันการ redirect ไปหน้า login แล้วไป LINE login page ซ้ำ
           if (liff.isInClient()) {
-            console.log(
-              "🎯 อยู่ใน LINE environment แต่ยังไม่ login → login อัตโนมัติ",
-            );
             liff.login();
+          } else {
+            setIsAppLoading(false);
           }
         }
       } catch (err) {
         console.error("LIFF Init Error:", err);
+        setIsAppLoading(false);
       }
     };
     initLiff();
@@ -75,10 +77,8 @@ export default function App() {
   const handleLineUserData = async () => {
     try {
       const lineIdToken = liff.getIDToken();
-
       if (lineIdToken) {
         const res = await postLineAuth(lineIdToken);
-
         if (!res.ok) throw new Error("แลกโทเค็นไม่สำเร็จ");
         const data = await res.json();
 
@@ -86,7 +86,6 @@ export default function App() {
           auth,
           data.firebase_token,
         );
-
         const profile = await liff.getProfile();
         const decodedToken = liff.getDecodedIDToken() as any;
 
@@ -96,29 +95,16 @@ export default function App() {
           displayName: profile.displayName,
           photoURL: profile.pictureUrl,
           provider: "line",
-          role: profile.role,
+          role: "user",
         };
 
         const firebaseToken = await userCredential.user.getIdToken(true);
+        setToken(firebaseToken, 24);
 
-        // เก็บ token ไว้ใน localStorage พร้อม expiry time
-        setToken(firebaseToken, 24); // 24 hours expiry
-
-        // เรียกใช้งานฟังก์ชันแยกตัวเดิม
         const syncRes = await postUsersSync(lineUser);
-
         if (syncRes.ok) {
           const resData = await syncRes.json();
-          const syncedUser = resData.data;
-
-          lineUser = {
-            ...lineUser,
-            role: syncedUser?.role,
-          };
-          console.log(
-            "✅ ล็อกอิน LINE + บันทึกสิทธิ์สำเร็จ! Role:",
-            lineUser.role,
-          );
+          lineUser.role = resData.data?.role || "user";
         }
 
         setUser(lineUser);
@@ -126,9 +112,7 @@ export default function App() {
       }
     } catch (err) {
       console.error("LINE Auth Error:", err);
-      if (!liff.isInClient()) {
-        liff.logout();
-      }
+      if (!liff.isInClient()) liff.logout();
       localStorage.removeItem("userData");
       setUser(null);
     }
@@ -139,16 +123,11 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
-      setIsAuthLoading(true); // เริ่มโหลด
-
+      setIsAuthLoading(true);
       if (currentUser) {
         try {
-          // 1. ดึง Token ใหม่เสมอ
           const idToken = await currentUser.getIdToken(true);
           setToken(idToken, 24);
-
-          // 2. เรียก API เพื่อ Sync ข้อมูลและ Role ล่าสุดจาก Backend
-          // (แนะนำให้ใช้ฟังก์ชันที่คุณมีอยู่ เช่น postUsersSync)
           const syncRes = await postUsersSync({
             uid: currentUser.uid,
             email: currentUser.email,
@@ -159,13 +138,8 @@ export default function App() {
 
           if (syncRes.ok) {
             const resData = await syncRes.json();
-            const syncedUser = resData.data; // ตรงนี้จะได้ role ที่ถูกต้องจาก Database
-
-            const finalUserData = {
-              ...syncedUser,
-              provider: "firebase",
-            };
-
+            const syncedUser = resData.data;
+            const finalUserData = { ...syncedUser, provider: "firebase" };
             setUser(finalUserData);
             localStorage.setItem("userData", JSON.stringify(finalUserData));
           }
@@ -173,13 +147,11 @@ export default function App() {
           console.error("Sync Error:", e);
         }
       } else {
-        // Logout
         setUser(null);
         localStorage.removeItem("userData");
         removeToken();
       }
-
-      setIsAuthLoading(false); // Sync เสร็จแล้ว
+      setIsAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -194,7 +166,7 @@ export default function App() {
           const token = credential?.accessToken;
           if (token) {
             const response = await fetch(
-              `https://graph.facebook.com/me?fields=picture.width(500).height(500)&access_token=${token}`,
+              `https://graph.facebook.com/me?fields=id,name,email,picture.width(500).height(500)&access_token=${token}`,
             );
             const data = await response.json();
             if (data?.picture?.data) {
@@ -203,8 +175,8 @@ export default function App() {
               const updatedUser = {
                 uid: result.user.uid,
                 email: result.user.email,
-                displayName: result.user.displayName,
-                photoURL: realPicUrl,
+                displayName: data.name,
+                photoURL: data.picture?.data?.url || result.user.photoURL,
                 provider: "firebase",
               };
               setUser(updatedUser);
@@ -220,20 +192,26 @@ export default function App() {
     handleRedirectResult();
   }, []);
 
-  // ฟังก์ชันจัดการเช็คสิทธิ์ผู้ใช้งานประจำเมนูย่อย/เมนูหลัก
   const hasPermission = (item: MenuItem) => {
     if (!item.roles || item.roles.length === 0) return true;
     return item.roles.includes(user?.role);
   };
 
+  if (isAppLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <p>กำลังเชื่อมต่อระบบ...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen w-full flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      {/* 1. Header */}
+    <div className="h-screen w-full flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
       {user && !isPaymentPage && <Header user={user} setUser={setUser} />}
 
       <div className="flex flex-1 overflow-hidden">
         {user && !isPaymentPage && (
-          <aside className="hidden xl:flex flex-col w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-6 gap-8 overflow-y-auto">
+          <aside className="hidden xl:flex flex-col w-64 bg-white dark:bg-gray-800 border-r border-gray-200 p-6 overflow-hidden">
             <div className="flex flex-col gap-6">
               {menuConfig.filter(hasPermission).map((item, index) => (
                 <div key={index} className="flex flex-col gap-2">
@@ -258,7 +236,6 @@ export default function App() {
           </aside>
         )}
 
-        {/* 3. Main Content */}
         <main
           className={`flex-1 overflow-y-auto ${isPaymentPage ? "pb-0" : "pb-[100px]"} md:pb-0 scroll-smooth`}
         >

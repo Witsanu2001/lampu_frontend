@@ -16,7 +16,7 @@ export interface MenuItem {
 
 export const menuConfig: MenuItem[] = [
   {
-    label: "หน้าแรก",
+    label: "เมนูหมูกระทะ",
     to: "/home",
     roles: ["admin","user"],
     iconUrl: Home,
@@ -47,7 +47,7 @@ export const menuConfig: MenuItem[] = [
     submenu: [
       {
         label: "แดชบอร์ดข้อมูล",
-        to: "/settingsData/dashboard",
+        to: "/settingsData/dashboards",
         roles: ["admin"],
       },
       {

@@ -1,18 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { getFreshToken } from "../../shared/infra/auth/token";
 import type { Order } from "../const/order";
-// ✨ 1. Import auth ของ Firebase เข้ามา
-import { auth } from "../const/firebase";
-
 const apiUrl = import.meta.env.VITE_API_URL;
-
-// ✨ 2. สร้างฟังก์ชันตัวช่วยดึง Token ให้ฉลาดขึ้น
-export async function getFreshToken(): Promise<string> {
-  if (auth.currentUser) {
-    return await auth.currentUser.getIdToken();
-  }
-  return localStorage.getItem("auth_token") || localStorage.getItem("firebase_token") || "";
-}
-
 export async function addOrders(formData: FormData, token: string) {
   const response = await fetch(`${apiUrl}/api/orders/orders_add`, {
     method: "POST",
@@ -147,4 +136,27 @@ export async function getAddOnMenus(token: string) {
     image: item.image_url_menu,
     available: item.available,
   }));
+}
+
+
+// ฟังก์ชันส่งออเดอร์แบบก้อนเดียว พร้อมลำดับคิว
+export async function assignBulkOrders(payload: any[]): Promise<string> {
+  const token = await getFreshToken(); // ดึง Token ตามวิธีของคุณ
+  
+  const response = await fetch(`${apiUrl}/api/orders/bulk_assign`, {
+    method: "POST", // ส่งก้อนใหญ่ใช้ POST เหมาะสมกว่า
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    // ห่อ Payload เป็น Object ที่มีคีย์ jobs เพื่อให้ Go อ่านง่าย
+    body: JSON.stringify({ jobs: payload }) 
+  });
+
+  const json = await response.json();
+  if (!response.ok || !json.success) {
+    throw new Error(json.message || "Failed to assign bulk orders");
+  }
+
+  return json.message;
 }

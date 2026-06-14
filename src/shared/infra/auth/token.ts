@@ -1,3 +1,6 @@
+import { auth } from "../../../modules/const/firebase"
+
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const TOKEN_KEY = 'auth_token'
 const TOKEN_EXPIRY_KEY = 'auth_token_expiry'
 
@@ -48,3 +51,15 @@ export const isAuthenticated = (): boolean => {
   return true
 }
 
+
+export async function getFreshToken(): Promise<string> {
+  const user = auth.currentUser;
+  
+  if (user) {
+    return await user.getIdToken(true); 
+  }
+
+  console.error("Session expired, redirecting to login...");
+  window.location.href = "/login";
+  return "";
+}

@@ -1,17 +1,6 @@
-import { auth } from "../const/firebase";
+import { getFreshToken } from "../../shared/infra/auth/token";
 
 const apiUrl = import.meta.env.VITE_API_URL;
-
-async function getFreshToken(): Promise<string> {
-  if (auth.currentUser) {
-    return await auth.currentUser.getIdToken();
-  }
-  return (
-    localStorage.getItem("auth_token") ||
-    localStorage.getItem("firebase_token") ||
-    ""
-  );
-}
 
 export async function getRiders() {
   const token = await getFreshToken();
