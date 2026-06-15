@@ -2,6 +2,7 @@
 import { getFreshToken } from "../../shared/infra/auth/token";
 import type { Order } from "../const/order";
 const apiUrl = import.meta.env.VITE_API_URL;
+
 export async function addOrders(formData: FormData, token: string) {
   const response = await fetch(`${apiUrl}/api/orders/orders_add`, {
     method: "POST",
@@ -159,4 +160,42 @@ export async function assignBulkOrders(payload: any[]): Promise<string> {
   }
 
   return json.message;
+}
+
+
+export async function getNewOrders(page: number = 1, limit: number = 10): Promise<Order[]> {
+  const token = await getFreshToken();
+
+  // 🌟 ดักไว้ถ้าหา token ไม่เจอจริงๆ จะได้ไม่ยิง API ไปให้ติด 401
+  if (!token) throw new Error("ไม่พบ Token ยืนยันตัวตน");
+
+  const response = await fetch(`${apiUrl}/api/orders/orders_new?page=${page}&limit=${limit}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+  });
+
+  const json = await response.json();
+  if (!response.ok || !json.success) throw new Error(json.message);
+  return json.data;
+}
+
+export async function getDeliveryOrders(page: number = 1, limit: number = 10): Promise<Order[]> {
+  const token = await getFreshToken();
+  
+  if (!token) throw new Error("ไม่พบ Token ยืนยันตัวตน");
+
+  const response = await fetch(`${apiUrl}/api/orders/orders_delivery?page=${page}&limit=${limit}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+  });
+
+  const json = await response.json();
+  if (!response.ok || !json.success) throw new Error(json.message);
+  return json.data;
 }

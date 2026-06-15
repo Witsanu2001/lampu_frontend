@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/modules/order/OrderDetail.tsx
 
@@ -11,7 +10,6 @@ import turfCircle from "@turf/circle";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { Order } from "../const/order";
 import { getOrderById, updateStatus } from "../api/api_order";
-import { getRiders } from "../api/api_user";
 
 // 🌟 กำหนดพิกัดร้าน
 const SHOP_LAT = 8.301677;
@@ -23,11 +21,6 @@ export default function OrderDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [riders, setRiders] = useState<any[]>([]);
-  const [selectedRiderId, setSelectedRiderId] = useState<string>("");
-
   // 🌟 State สำหรับแผนที่และ Modal
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [viewState, setViewState] = useState({
@@ -141,38 +134,9 @@ export default function OrderDetail() {
       const successMessage = await updateStatus(orderId, "preparing");
       alert(successMessage);
       setOrder((prev) => (prev ? { ...prev, status: "preparing" } : prev));
-    } catch (error: any) {
-      alert(`เกิดข้อผิดพลาด: ${error.message}`);
-    }
-  };
 
-  const openRiderModal = async () => {
-    try {
-      const riderList = await getRiders();
-      setRiders(riderList);
-      setIsModalOpen(true);
-    } catch (err: any) {
-      alert("ไม่สามารถดึงรายชื่อไรเดอร์ได้");
-    }
-  };
-
-  const handleStartOrder = async () => {
-    if (!selectedRiderId) {
-      alert("กรุณาเลือกไรเดอร์ก่อนครับ");
-      return;
-    }
-
-    if (!orderId) return;
-    try {
-      const successMessage = await updateStatus(
-        orderId,
-        "ready",
-        selectedRiderId,
-      );
-
-      alert(successMessage);
-      setOrder((prev) => (prev ? { ...prev, status: "ready" } : prev));
-      setIsModalOpen(false);
+      // 🌟 เพิ่มคำสั่ง navigate ตรงนี้เพื่อให้เด้งกลับหน้ารายการออเดอร์
+      navigate("/orders");
     } catch (error: any) {
       alert(`เกิดข้อผิดพลาด: ${error.message}`);
     }
@@ -390,7 +354,7 @@ export default function OrderDetail() {
               <span className="font-medium">
                 {order.payment?.method === "promptpay"
                   ? "พร้อมเพย์"
-                  : order.payment?.method}
+                  : "เก็บเงินปลายทาง"}
               </span>
             </p>
           </div>
@@ -467,40 +431,22 @@ export default function OrderDetail() {
           </div>
         </div>
 
-        <div className="flex gap-3 pt-4 pb-8">
-          {order.status == "new" && (
+        {order.status == "new" && (
+          <div className="flex gap-3 pt-4 pb-8">
             <button
               onClick={handleRefuseOrder}
               className="flex-1 py-3.5 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 rounded-xl font-bold transition-colors shadow-sm"
             >
               ❌ ปฏิเสธ
             </button>
-          )}
-          {order.status == "preparing" ? (
-            <button
-              onClick={openRiderModal}
-              className="flex-[2] py-3.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-sm transition-colors"
-            >
-              ✅ พร้อมส่ง
-            </button>
-          ) : order.status == "preparing" ? (
-            <button
-              onClick={openRiderModal}
-              className="flex-[2] py-3.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-sm transition-colors"
-            >
-              เลือกไรเดอร์และเริ่มงาน
-            </button>
-          ) : order.status == "ready" ? (
-            <></>
-          ) : (
             <button
               onClick={handleConfirmOrder}
               className="flex-[2] py-3.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-sm transition-colors"
             >
               ✅ รับออเดอร์
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* 🌟 Modal สำหรับแสดงแผนที่ */}
@@ -666,48 +612,6 @@ export default function OrderDetail() {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-sm">
-            <h2 className="text-lg font-bold mb-4">เลือกไรเดอร์</h2>
-
-            <div className="space-y-2 mb-6">
-              {riders.map((rider) => (
-                <label
-                  key={rider.uid}
-                  className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-gray-100 rounded"
-                >
-                  <input
-                    type="radio"
-                    name="rider"
-                    value={rider.uid}
-                    checked={selectedRiderId === rider.uid}
-                    onChange={(e) => setSelectedRiderId(e.target.value)}
-                    className="w-4 h-4"
-                  />
-                  <span>{rider.name || rider.email}</span>
-                </label>
-              ))}
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-gray-600"
-              >
-                ยกเลิก
-              </button>
-              <button
-                onClick={handleStartOrder}
-                className="px-4 py-2 bg-green-600 text-white rounded"
-              >
-                เริ่มงาน
-              </button>
             </div>
           </div>
         </div>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getFreshToken } from "../../shared/infra/auth/token";
 
 const apiUrl = import.meta.env.VITE_API_URL;
@@ -12,6 +13,34 @@ export interface Menu {
   available: boolean;
   image_url_menu: string;
   created_at: string;
+}
+export async function getListMenu(): Promise<Menu[]> {
+  const token = await getFreshToken();
+
+  const response = await fetch(`${apiUrl}/api/orders/menus_type/main`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`, // ต้องมี Authorization
+    },
+  });
+
+  const json = await response.json();
+
+  // 🌟 เช็ค success เป็นพิมพ์เล็ก ตามที่ Go Backend ส่งมา (ถ้าแก้ utils.go แล้ว)
+  if (!response.ok || !json.success) {
+    throw new Error(json.message || "Failed to fetch menus");
+  }
+
+  // 🌟 Map ข้อมูลให้ตรงกับ UI Model (ในกรณีที่ชื่อ Field ใน DB กับใน UI ไม่เหมือนกัน)
+  return (json.data || []).map((item: any) => ({
+    id: item.id,
+    name: item.name_menu,      // ตรงกับที่ Backend ส่งมา
+    price: item.price_menu,
+    description: item.description_menu,
+    image: item.image_url_menu,
+    available: item.available,
+  }));
 }
 
 export async function getAllMenu(): Promise<Menu[]> { // 🌟 2. ใส่ Menu[] เข้าไปใน Promise

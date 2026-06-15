@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { auth } from "../../../modules/const/firebase"
+import { onAuthStateChanged } from "firebase/auth" // 🌟 เพิ่ม import นี้นะครับ
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 const TOKEN_KEY = 'auth_token'
@@ -32,7 +34,6 @@ export const removeToken = (): void => {
 export const isAuthenticated = (): boolean => {
   const token = getToken()
   if (!token) {
-    // Check if userData exists (for LINE/Firebase auth)
     const userData = localStorage.getItem('userData')
     if (userData) {
       try {
@@ -51,15 +52,28 @@ export const isAuthenticated = (): boolean => {
   return true
 }
 
-
 export async function getFreshToken(): Promise<string> {
-  const user = auth.currentUser;
-  
+  // 🌟 ใช้ Promise ครอบเพื่อรอให้ Firebase โหลด Auth State เสร็จก่อน
+  const user = await new Promise<any>((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      unsubscribe(); // เมื่อรู้สถานะแล้วให้ยกเลิกการติดตามทันที
+      resolve(currentUser);
+    });
+  });
+
   if (user) {
-    return await user.getIdToken(true); 
+    try {
+      // 🌟 ดึง Token สดใหม่จาก Firebase
+      const newToken = await user.getIdToken(true); 
+      // 🌟 สั่งอัปเดตลง localStorage ทันที
+      setToken(newToken, 1);
+      return newToken;
+    } catch (error) {
+      console.error("Error getting fresh token:", error);
+    }
   }
 
-  console.error("Session expired, redirecting to login...");
+  console.error("Session expired or user not found, redirecting to login...");
   window.location.href = "/login";
   return "";
 }

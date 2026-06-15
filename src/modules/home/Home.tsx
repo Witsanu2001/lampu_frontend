@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useCart } from "../../shared/context/CartContext";
+import { getListMenu } from "../api/api_menu";
 
 interface FlyingItem {
   id: number;
@@ -23,50 +24,14 @@ export default function Home() {
     const fetchMainMenus = async () => {
       setIsLoading(true);
       try {
-        let token = "";
-        let retries = 10;
+        // 🌟 ใช้ฟังก์ชัน getListMenu ที่เราเขียนไว้ แทนการ Fetch ตรงๆ
+        const data = await getListMenu();
 
-        while (!token && retries > 0) {
-          token =
-            localStorage.getItem("auth_token") ||
-            localStorage.getItem("firebase_token") ||
-            "";
-          if (!token) {
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            retries--;
-          }
-        }
-
-        if (!token) {
-          console.warn("⚠️ ไม่พบ Token หรือผู้ใช้ยังไม่ได้ล็อกอิน");
-          setIsLoading(false);
-          return;
-        }
-
-        const response = await fetch(
-          "https://api-gateway-879165280409.asia-southeast1.run.app/api/orders/menus_type/main",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
-
-        if (response.ok) {
-          const json = await response.json();
-          const formatted = (json.data || []).map((item: any) => ({
-            id: item.id,
-            name: item.name_menu,
-            price: item.price_menu,
-            description: item.description_menu,
-            image: item.image_url_menu,
-            available: item.available,
-          }));
-
-          setMooKrataMenus(formatted.filter((item: any) => item.available));
-        }
+        // กรองเฉพาะที่ available
+        setMooKrataMenus(data.filter((item) => item.available));
       } catch (error) {
         console.error("Error fetching main menus:", error);
+        // อาจเพิ่มการแจ้งเตือน Error ตรงนี้
       } finally {
         setIsLoading(false);
       }

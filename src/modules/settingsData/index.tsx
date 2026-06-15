@@ -15,7 +15,7 @@ export default function Settingsdata() {
         
         {/* 1. Dashboard Card */}
         <Link
-          to="/settingsData/dashboard"
+          to="/settingsData/dashboards"
           className="flex items-start bg-white rounded-2xl p-6 shadow-sm border border-gray-100 border-l-4 border-l-blue-500 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-gray-200"
         >
           <div className="text-4xl mr-5 bg-blue-50 text-blue-500 w-16 h-16 flex items-center justify-center rounded-xl shrink-0">
