@@ -237,7 +237,7 @@ export default function App() {
         )}
 
         <main
-          className={`flex-1 overflow-y-auto ${isPaymentPage ? "pb-0" : "pb-[100px]"} md:pb-0 scroll-smooth`}
+          className={`flex-1 overflow-y-auto ${isPaymentPage ? "pb-0" : "pb-[80px]"} md:pb-0 scroll-smooth`}
         >
           <AppRoutes user={user} setUser={setUser} />
         </main>

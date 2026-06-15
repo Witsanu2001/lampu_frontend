@@ -124,3 +124,7 @@ git pull origin main
 หรือถ้า branch หลักเป็น master
 
 git pull origin master
+
+git stash
+git pull
+git stash pop

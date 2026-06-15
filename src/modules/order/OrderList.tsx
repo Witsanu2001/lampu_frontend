@@ -417,7 +417,7 @@ export default function OrderList() {
 
       {/* ส่วนแสดงรายการออเดอร์ พร้อมรับ Scroll */}
       <div 
-        className="flex-1 overflow-y-auto px-6 pb-[160px] xl:pb-24 pt-4 space-y-3"
+        className="flex-1 overflow-y-auto px-6 pb-[10px] xl:pb-24 pt-4 space-y-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         onScroll={handleScroll} 
       >
         {isTabLoading ? (
