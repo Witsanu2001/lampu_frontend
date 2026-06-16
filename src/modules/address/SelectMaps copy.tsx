@@ -70,14 +70,15 @@ interface SelectMapsProps {
     fee: number,
     distance: number,
     isMeetup: boolean,
+    addressName: string // ✨ รับ parameter ชื่อที่อยู่
   ) => void;
 }
 
 const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
   const [viewState, setViewState] = useState({
-    longitude: 99.36760271084832,
-    latitude: 8.300893140259126,
-    zoom: 17,
+    longitude: SHOP_LNG,
+    latitude: SHOP_LAT,
+    zoom: 15,
   });
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -85,6 +86,148 @@ const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
 
   // 🎯 1. State เช็กว่าลูกค้าติ๊กเลือกนัดรับออเดอร์หรือไม่
   const [isMeetupMode, setIsMeetupMode] = useState(false);
+
+  // ✨ State สำหรับเก็บชื่อที่อยู่/ตำบล
+  const [mapAddressName, setMapAddressName] = useState<string>("กำลังดึงข้อมูลที่อยู่...");
+  const [isFetchingAddress, setIsFetchingAddress] = useState(false);
+
+  
+  const fetchAddressName = async (lng: number, lat: number) => {
+    setIsFetchingAddress(true);
+    try {
+      const token = import.meta.env.VITE_MAPBOX_TOKEN;
+
+      // 🎯 1. ยิง API 2 ตัวพร้อมกัน: หา POI (สถานที่สำคัญ) และ หาข้อมูลที่อยู่
+      const [poiResponse, addressResponse] = await Promise.all([
+        fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&language=th&types=poi&limit=1`),
+        fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&language=th&types=address,neighborhood,locality,place,region&limit=1`)
+      ]);
+
+      const poiData = await poiResponse.json();
+      const addressData = await addressResponse.json();
+
+      let nearestPOI = "";
+      // ถ้าพบสถานที่สำคัญ (โรงพยาบาล, วัด, ปั๊ม) ที่อยู่ใกล้ๆ
+      if (poiData.features && poiData.features.length > 0) {
+        nearestPOI = poiData.features[0].text_th || poiData.features[0].text;
+      }
+
+      let soi = "";
+      let village = "";
+      let locality = ""; // ตำบล
+      let place = "";    // อำเภอ
+      let region = "";   // จังหวัด
+
+      if (addressData.features && addressData.features.length > 0) {
+        const f = addressData.features[0];
+        
+        // 🎯 1.1 สร้างฟังก์ชันช่วยคัดกรอง: ❌ ตัดถนนทิ้ง, ✅ เก็บซอย, ✅ เก็บหมู่บ้าน
+        const analyzeText = (type: string, text: string) => {
+          if (!text) return;
+          const lower = text.toLowerCase();
+          
+          // 🚫 ข้ามทันทีถ้ามีคำว่า "ถนน", "road", หรือ "rd"
+          if (lower.includes('ถนน') || lower.includes('road') || lower.match(/\brd\b/)) {
+            return;
+          }
+
+          // ✅ ถ้ามีคำว่า "ซอย" หรือ "soi" ให้เก็บใส่ตัวแปรซอย
+          if (lower.includes('ซอย') || lower.includes('soi')) {
+            if (!soi) soi = text;
+          } 
+          // ✅ ถ้าไม่ใช่ซอยและไม่ใช่ถนน ให้เก็บเป็นหมู่บ้าน/ชุมชน
+          else if (type.includes('neighborhood') || type.includes('address')) {
+            if (!village) village = text;
+          }
+        };
+
+        // สแกนข้อความหลัก
+        analyzeText(f.id, f.text_th || f.text);
+
+        // สแกนข้อความแวดล้อม (ตำบล อำเภอ ถนน ซอย)
+        if (f.context) {
+          f.context.forEach((c: any) => {
+            const cText = c.text_th || c.text;
+            analyzeText(c.id, cText); // โยนไปคัดกรองซอย/ถนน/หมู่บ้าน
+            
+            if (c.id.includes('locality')) locality = cText;
+            if (c.id.includes('place')) place = cText;
+            if (c.id.includes('region')) region = cText;
+          });
+        }
+        
+        // เผื่อกรณีที่ตัวหมุดตรงกับตำบล/อำเภอพอดี
+        if (f.id.includes('locality') && !locality) locality = f.text_th || f.text;
+        if (f.id.includes('place') && !place) place = f.text_th || f.text;
+        if (f.id.includes('region') && !region) region = f.text_th || f.text;
+      }
+
+      // 🎯 2. ประกอบร่างข้อความ
+      const parts = [];
+
+      // 📍 ใส่สถานที่สำคัญ 
+      if (nearestPOI) parts.push(`ใกล้${nearestPOI}`); 
+      
+      // 📍 ใส่ "ซอย" (ถ้ามี)
+      if (soi && soi !== nearestPOI) parts.push(soi);
+
+      // 📍 ใส่ "ชื่อชุมชน/หมู่บ้าน" (ถ้ามี และไม่ซ้ำกับซอย/POI)
+      if (village && village !== nearestPOI && village !== soi) parts.push(village);
+
+      // 📍 ใส่ตำบล (เติม ต. ให้ถ้ายังไม่มี)
+      if (locality) {
+        const lText = locality.startsWith('ต.') || locality.startsWith('ตำบล') ? locality : `ต.${locality}`;
+        parts.push(lText);
+      }
+      
+      // 📍 ใส่อำเภอ (เติม อ. ให้ถ้ายังไม่มี)
+      if (place) {
+        const pText = place.startsWith('อ.') || place.startsWith('อำเภอ') ? place : `อ.${place}`;
+        parts.push(pText);
+      }
+      
+      // 📍 ใส่จังหวัด (ตัดคำว่า "จังหวัด" หรือ "จ." ทิ้ง)
+      if (region) {
+        const cleanRegion = region.replace(/จังหวัด|จ\./g, '').trim();
+        if (cleanRegion) parts.push(cleanRegion);
+      }
+
+      let finalAddress = parts.join(' ');
+
+      // 🎯 3. คลีนข้อความให้สวยงาม และแปลงภาษาอังกฤษเป็นไทย
+      finalAddress = finalAddress
+        .replace(/Tha Yang/gi, 'ท่ายาง')
+        .replace(/Thung Sang/gi, 'ทุ่งสัง')
+        .replace(/Prik/gi, 'ปริก')
+        .replace(/Kurae/gi, 'กุแหระ')
+        .replace(/Sin Pun/gi, 'สินปุน')
+        .replace(/Khok Han/gi, 'โคกหาร')
+        .replace(/Tambon\s/gi, 'ต.')
+        .replace(/Amphoe\s/gi, 'อ.')
+        .replace(/Chang Wat\s/gi, '')
+        .replace(/Province\s/gi, '')
+        .replace(/Mueang\s/gi, 'เมือง')
+        .replace(/Ban\s/gi, 'บ้าน')
+        .replace(/Soi\s/gi, 'ซอย ') // ✨ เผื่อ Mapbox ส่งคำว่า Soi มา
+        .replace(/Thailand|ประเทศไทย|[0-9]{5}/g, '')
+        .replace(/\b\d{4}\b/g, '')
+        .replace(/,\s*/g, ' ')
+        .replace(/\s+/g, ' ') // ลบช่องว่างที่ซ้ำซ้อน
+        .trim();
+
+      if (!finalAddress) {
+         finalAddress = "ระบุพื้นที่ไม่ได้ (กรุณาพิมพ์ที่อยู่เอง)";
+      }
+
+      setMapAddressName(finalAddress);
+
+    } catch (error) {
+      console.error("Error fetching address:", error);
+      setMapAddressName("เกิดข้อผิดพลาดในการดึงข้อมูลที่อยู่");
+    } finally {
+      setIsFetchingAddress(false);
+    }
+  };
 
   // ดึงตำแหน่ง GPS ของลูกค้าเมื่อเปิดหน้าเว็บครั้งแรก
   useEffect(() => {
@@ -94,27 +237,24 @@ const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
           setViewState({
             longitude: position.coords.longitude,
             latitude: position.coords.latitude,
-            zoom: 17,
+            zoom: 15,
           });
           setIsLoadingLocation(false);
+          fetchAddressName(position.coords.longitude, position.coords.latitude);
         },
         () => {
           setIsLoadingLocation(false);
+          fetchAddressName(SHOP_LNG, SHOP_LAT);
         },
         { enableHighAccuracy: true, timeout: 5000 },
       );
     } else {
       setIsLoadingLocation(false);
+      fetchAddressName(SHOP_LNG, SHOP_LAT);
     }
   }, []);
 
-  // คำนวณระยะทางจริงจากร้านถึงจุดกึ่งกลางหน้าจอ
-  const distanceFromShop = calculateDistance(
-    SHOP_LAT,
-    SHOP_LNG,
-    viewState.latitude,
-    viewState.longitude,
-  );
+  const distanceFromShop = calculateDistance(SHOP_LAT, SHOP_LNG, viewState.latitude, viewState.longitude);
 
   // 💵 2. ปรับ Logic เงื่อนไขจัดส่งปกติ vs นัดรับ
   let deliveryFee = 0;
@@ -123,7 +263,6 @@ const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
   let zoneName: string;
 
   if (!isMeetupMode) {
-    // 🛵 กรณีไม่ได้ติ๊ก Checkbox (จัดส่งปกติ) ตัดที่ 9 กิโลเมตร
     isMeetup = false;
     if (distanceFromShop <= ZONE_1_MAX) {
       deliveryFee = 0;
@@ -134,13 +273,11 @@ const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
       zoneName = "โซนรอบนอก 🟡";
       isDeliverable = true;
     } else {
-      // 🚫 เกิน 9 กิโลเมตร (จัดส่งปกติ) บล็อกปุ่มทันที
       deliveryFee = 0;
       zoneName = "อยู่นอกพื้นที่จัดส่ง 🚫";
       isDeliverable = false;
     }
   } else {
-    // 🤝 กรณีติ๊ก Checkbox "นัดรับออเดอร์" ขยายระยะเป็น 12 กิโลเมตร
     isMeetup = true;
     if (distanceFromShop <= ZONE_1_MAX) {
       deliveryFee = 0;
@@ -151,19 +288,16 @@ const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
       zoneName = "จุดนัดรับโซนสีส้ม 🟡";
       isDeliverable = true;
     } else if (distanceFromShop <= ZONE_3_MAX) {
-      // ✨ อยู่ในระยะวงแดง (ไม่เกิน 12 กิโลเมตร) คิด 20 บาท
       deliveryFee = 20;
       zoneName = "จุดนัดรับโซนสีแดง 🔴";
       isDeliverable = true;
     } else {
-      // 🚫 เกิน 12 กิโลเมตร บล็อกปุ่มทันที
       deliveryFee = 0;
       zoneName = "เกินขอบเขตนัดรับ 🚫";
       isDeliverable = false;
     }
   }
 
-  // สร้างข้อมูลวงกลมแต่ละโซน
   const zone3Circle = generateCircleGeoJSON(SHOP_LNG, SHOP_LAT, ZONE_3_MAX);
   const zone2Circle = generateCircleGeoJSON(SHOP_LNG, SHOP_LAT, ZONE_2_MAX);
   const zone1Circle = generateCircleGeoJSON(SHOP_LNG, SHOP_LAT, ZONE_1_MAX);
@@ -179,7 +313,8 @@ const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
       <div className="flex-1 relative w-full h-full">
         <Map
           {...viewState}
-          onMoveEnd={(evt) => setViewState(evt.viewState)}
+          onMove={(evt) => setViewState(evt.viewState)}
+          onMoveEnd={(evt) => fetchAddressName(evt.viewState.longitude, evt.viewState.latitude)}
           mapStyle="mapbox://styles/janos2001/cmq4te5bc007c01s3f63xa5ll"
           mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
           style={{ width: "100%", height: "100%" }}
@@ -187,7 +322,6 @@ const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
         >
           {isMapLoaded && (
             <>
-              {/* ✨ ชั้นที่ 3: วงนอกสุด (สีแดงอ่อน 12 กม.) ซ่อน/แสดงตาม Checkbox นัดรับ */}
               {isMeetupMode && (
                 <Source id="zone3-source" type="geojson" data={zone3Circle}>
                   <Layer
@@ -202,7 +336,6 @@ const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
                 </Source>
               )}
 
-              {/* ชั้นที่ 2: วงกลาง (สีเหลือง/ส้มอ่อน 9 กม.) แสดงตลอด */}
               <Source id="zone2-source" type="geojson" data={zone2Circle}>
                 <Layer
                   id="zone2-layer"
@@ -215,7 +348,6 @@ const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
                 />
               </Source>
 
-              {/* ชั้นที่ 1: วงในสุด (สีเขียวอ่อน 1.3 กม.) แสดงตลอด */}
               <Source id="zone1-source" type="geojson" data={zone1Circle}>
                 <Layer
                   id="zone1-layer"
@@ -237,29 +369,15 @@ const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
         </div>
 
         {/* ป้ายบอกตำแหน่งร้าน */}
-        <div className="absolute top-4 right-4 bg-white px-3 py-2 rounded-lg shadow-md font-semibold text-xs z-10 border border-orange-100 flex items-center gap-1">
-          <span
-            className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-              !isDeliverable
-                ? "bg-red-100 text-red-600 animate-pulse" // กระพริบเตือนถ้านอกเขต
-                : isMeetupMode && distanceFromShop > ZONE_2_MAX
-                  ? "bg-red-100 text-red-700" // สีแดงสำหรับจุดนัดรับ 9-12 กิโล
-                  : isMeetupMode
-                    ? "bg-blue-100 text-blue-700"
-                    : deliveryFee === 0
-                      ? "bg-green-100 text-green-700"
-                      : "bg-orange-100 text-orange-700"
-            }`}
-          >
-            {zoneName}
-          </span>
+        <div className="absolute top-4 right-4 bg-white px-3 py-2 rounded-lg shadow-md font-semibold text-xs z-10 border border-emerald-100 flex items-center gap-1">
+          <span className="text-sm">🏠</span> ร้านลำพูหมูกระทะ
         </div>
 
         {/* หน้าจอกำลังโหลดตำแหน่งตอนเปิดเว็บครั้งแรก */}
         {isLoadingLocation && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-30">
             <div className="bg-white px-6 py-4 rounded-xl shadow-lg font-bold flex items-center gap-3">
-              <span className="animate-spin text-orange-500">⏳</span>{" "}
+              <span className="animate-spin text-emerald-500">⏳</span>{" "}
               กำลังค้นหาตำแหน่งของคุณ...
             </div>
           </div>
@@ -268,8 +386,9 @@ const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
 
       {/* 📊 บอร์ดวิเคราะห์ระยะทางและตั้งค่าด้านล่าง */}
       <div className="p-5 bg-white shadow-xl z-20 relative border-t border-slate-100 rounded-t-2xl">
+        
         {/* 🎯 3. Checkbox สำหรับเลือกนัดรับ */}
-        <div className="flex items-center mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <div className="flex items-center mb-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
           <input
             type="checkbox"
             id="meetup-checkbox"
@@ -285,7 +404,36 @@ const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
           </label>
         </div>
 
+        {/* ✨ กล่องแสดงชื่อพื้นที่ */}
+        <div className="mb-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+          <p className="text-xs text-emerald-600 font-bold mb-1">📍 ตำแหน่งจัดส่ง/นัดรับ:</p>
+          <p className="text-sm text-slate-700 line-clamp-2">
+            {isFetchingAddress ? (
+              <span className="animate-pulse text-slate-400">กำลังระบุพื้นที่...</span>
+            ) : (
+              mapAddressName
+            )}
+          </p>
+        </div>
+
         {/* ป้ายบอกสถานะโซนปัจจุบัน */}
+        <div className="mb-3">
+          <span
+            className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+              !isDeliverable
+                ? "bg-red-100 text-red-600 animate-pulse" 
+                : isMeetupMode && distanceFromShop > ZONE_2_MAX
+                  ? "bg-red-100 text-red-700" 
+                  : isMeetupMode
+                    ? "bg-blue-100 text-blue-700"
+                    : deliveryFee === 0
+                      ? "bg-green-100 text-green-700"
+                      : "bg-orange-100 text-orange-700"
+            }`}
+          >
+            {zoneName}
+          </span>
+        </div>
 
         <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
           <div>
@@ -339,9 +487,9 @@ const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
               viewState.longitude,
               deliveryFee,
               distanceFromShop,
-              isMeetup,
+              isMeetup, 
+              mapAddressName 
             );
-            alert(`📍 บันทึกพิกัดและราคาเข้าสู่ระบบสำเร็จ!`);
           }}
         >
           {isDeliverable

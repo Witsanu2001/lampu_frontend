@@ -1,6 +1,7 @@
 export interface Order {
   id: string;
   user_id: string; // ✨ เพิ่ม user_id
+  rider_id: string;
   status: string;  // ✨ เพิ่ม status
   mainItems: Item[];
   addOnItems: Item[];
@@ -23,6 +24,7 @@ export interface Item {
 }
 
 export interface Equipment {
+  needEquipment: boolean;
   stoveCount: number;
   panCount: number;
   charcoalCount: number;

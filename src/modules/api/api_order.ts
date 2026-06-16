@@ -199,3 +199,66 @@ export async function getDeliveryOrders(page: number = 1, limit: number = 10): P
   if (!response.ok || !json.success) throw new Error(json.message);
   return json.data;
 }
+ 
+export interface OrderSummary {
+  order_id: string;
+  status: string;
+  recipient: string;
+  address: string;
+  grand_total: number;
+  created_at: string;
+}
+
+
+export async function getSuccessOrders(selectedDate: string): Promise<OrderSummary[]> {
+  const token = await getFreshToken();
+  
+  if (!token) throw new Error("ไม่พบ Token ยืนยันตัวตน");
+
+  const response = await fetch(`${apiUrl}/api/orders/orders_get/success?date=${selectedDate}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+  });
+
+  const json = await response.json();
+  if (!response.ok || !json.success) throw new Error(json.message);
+  return json.data;
+}
+
+export interface StoveJob {
+  order_id: string;
+  status: string;
+  equipment: {
+    needEquipment: boolean;
+    stoveCount: number;
+    panCount: number;
+  };
+  order_details: {
+    shipping: {
+      recipient: string;
+      address: string;
+      phone: string;
+    };
+  };
+}
+
+export async function getStoveOrders(): Promise<StoveJob[]> {
+  const token = await getFreshToken();
+  
+  if (!token) throw new Error("ไม่พบ Token ยืนยันตัวตน");
+
+  const response = await fetch(`${apiUrl}/api/jobs/stove`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+  });
+
+  const json = await response.json();
+  if (!response.ok || !json.success) throw new Error(json.message);
+  return json.data;
+}

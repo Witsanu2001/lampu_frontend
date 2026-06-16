@@ -514,7 +514,7 @@ export default function Address() {
       {/* 🌟 3. ย้าย SelectMaps ออกมาทำเป็น Modal แบบเต็มจอสวยๆ */}
       {showMap && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 transition-opacity">
-          <div className="relative w-full max-w-5xl h-[85vh] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-fadeIn">
+          <div className="relative w-full max-w-5xl h-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-fadeIn">
             {/* Header ของ Modal แผนที่ */}
             <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 z-10">
               <h3 className="text-lg md:text-xl font-bold text-gray-800 dark:text-white">

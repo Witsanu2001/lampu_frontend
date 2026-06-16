@@ -4,7 +4,11 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { assignBulkOrders, getNewOrders, getDeliveryOrders } from "../api/api_order"; 
+import {
+  assignBulkOrders,
+  getNewOrders,
+  getDeliveryOrders,
+} from "../api/api_order";
 import { getRiders } from "../api/api_user";
 import type { Order } from "../const/order";
 import { onValue, ref } from "firebase/database";
@@ -32,13 +36,13 @@ const RiderModal = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    let isMounted = true; 
+    let isMounted = true;
 
     const fetchRiders = async () => {
       setLoading(true);
       setSelectedRiderId("");
       setRiders([]);
-      
+
       try {
         const data = await getRiders();
         if (isMounted) {
@@ -63,25 +67,29 @@ const RiderModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl w-full max-w-sm shadow-xl">
-        <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">เลือกไรเดอร์</h2>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl w-full max-w-sm shadow-2xl border border-gray-100 dark:border-gray-700">
+        <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">
+          เลือกไรเดอร์
+        </h2>
         {loading ? (
           <div className="py-8 flex flex-col items-center justify-center">
             <div className="w-8 h-8 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin mb-2"></div>
             <p className="text-gray-500 text-sm">กำลังโหลดข้อมูลไรเดอร์...</p>
           </div>
         ) : (
-          <div className="space-y-2 mb-6 max-h-60 overflow-y-auto pr-2">
+          <div className="space-y-2 mb-6 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
             {riders.length === 0 ? (
-               <p className="text-center text-gray-500 py-4">ไม่พบข้อมูลไรเดอร์</p>
+              <p className="text-center text-gray-500 py-4">
+                ไม่พบข้อมูลไรเดอร์
+              </p>
             ) : (
               riders.map((rider) => (
                 <label
                   key={rider.uid}
-                  className={`flex items-center space-x-3 cursor-pointer p-3 rounded-xl border transition-colors ${
+                  className={`flex items-center space-x-3 cursor-pointer p-3 rounded-2xl border transition-all ${
                     selectedRiderId === rider.uid
-                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10"
+                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 shadow-sm"
                       : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
                   }`}
                 >
@@ -104,14 +112,14 @@ const RiderModal = ({
         <div className="flex justify-end gap-3 border-t border-gray-100 dark:border-gray-700 pt-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium"
+            className="px-5 py-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors font-medium"
           >
             ยกเลิก
           </button>
           <button
             onClick={() => onAssign(selectedRiderId)}
             disabled={!selectedRiderId || loading}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium shadow-sm"
+            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:dark:bg-gray-600 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-xl transition-all font-medium shadow-md hover:shadow-lg active:scale-95"
           >
             เริ่มงาน
           </button>
@@ -121,44 +129,39 @@ const RiderModal = ({
   );
 };
 
-type OrderStatus =
-  | "new"
-  | "preparing"
-  | "ready"
-  | "shipping"
-  | "delivered";
+type OrderStatus = "new" | "preparing" | "ready" | "shipping" | "delivered";
 
 const getStatusConfig = (status: OrderStatus) => {
   const configs = {
     new: {
       label: "ออเดอร์ใหม่",
-      bgColor: "bg-blue-100 dark:bg-blue-900",
-      textColor: "text-blue-800 dark:text-blue-200",
-      borderColor: "border-blue-300 dark:border-blue-700",
+      bgColor: "bg-blue-100 dark:bg-blue-500/20",
+      textColor: "text-blue-700 dark:text-blue-400",
+      dotColor: "bg-blue-500",
     },
     preparing: {
-      label: "กำลังเตรียมออเดอร์",
-      bgColor: "bg-orange-100 dark:bg-orange-900",
-      textColor: "text-orange-800 dark:text-orange-200",
-      borderColor: "border-orange-300 dark:border-orange-700",
+      label: "กำลังเตรียม",
+      bgColor: "bg-orange-100 dark:bg-orange-500/20",
+      textColor: "text-orange-700 dark:text-orange-400",
+      dotColor: "bg-orange-500",
     },
     ready: {
       label: "พร้อมส่ง",
-      bgColor: "bg-purple-100 dark:bg-purple-900",
-      textColor: "text-purple-800 dark:text-purple-200",
-      borderColor: "border-purple-300 dark:border-purple-700",
+      bgColor: "bg-purple-100 dark:bg-purple-500/20",
+      textColor: "text-purple-700 dark:text-purple-400",
+      dotColor: "bg-purple-500",
     },
     shipping: {
       label: "กำลังไปส่ง",
-      bgColor: "bg-indigo-100 dark:bg-indigo-900",
-      textColor: "text-indigo-800 dark:text-indigo-200",
-      borderColor: "border-indigo-300 dark:border-indigo-700",
+      bgColor: "bg-indigo-100 dark:bg-indigo-500/20",
+      textColor: "text-indigo-700 dark:text-indigo-400",
+      dotColor: "bg-indigo-500",
     },
     delivered: {
       label: "ส่งสำเร็จ",
-      bgColor: "bg-green-100 dark:bg-green-900",
-      textColor: "text-green-800 dark:text-green-200",
-      borderColor: "border-green-300 dark:border-green-700",
+      bgColor: "bg-emerald-100 dark:bg-emerald-500/20",
+      textColor: "text-emerald-700 dark:text-emerald-400",
+      dotColor: "bg-emerald-500",
     },
   };
   return configs[status] || configs["new"];
@@ -166,39 +169,31 @@ const getStatusConfig = (status: OrderStatus) => {
 
 export default function OrderList() {
   const [orders, setOrders] = useState<Order[]>([]);
-  
+
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isTabLoading, setIsTabLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [activeTab, setActiveTab] = useState<"kitchen" | "delivery">("kitchen");
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // 🌟 State สำหรับ Server-Side Pagination
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
-  const limit = 10; // ดึงทีละ 10 รายการ
+  const limit = 10;
 
-  // 🌟 ตัวกระตุ้นรีเฟรชเมื่อ Firebase แจ้งเตือนอัปเดต
   const [refreshKey, setRefreshKey] = useState(0);
-  
+
   const navigate = useNavigate();
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchOrders = async () => {
-      // จัดการสถานะ Loading ตามสถานการณ์
-      if (page === 1 && !isInitialLoading) setIsTabLoading(true);
       if (page > 1) setIsFetchingMore(true);
-      
-      try {
-        // 🌟 เอา while loop เช็ค Token ตรงนี้ออกได้เลย
-        // เพราะด้านใน getNewOrders() มันถูกครอบด้วย getFreshToken() ที่รอ Firebase ให้แล้ว
 
-        // 🌟 ยิง API พร้อมส่ง page และ limit
+      try {
         let data: Order[] = [];
         if (activeTab === "kitchen") {
           data = await getNewOrders();
@@ -207,7 +202,6 @@ export default function OrderList() {
         }
 
         if (isMounted) {
-          // ตรวจสอบว่ายังมีข้อมูลให้ดึงต่อไหม
           if (data.length < limit) {
             setHasMore(false);
           } else {
@@ -216,12 +210,11 @@ export default function OrderList() {
 
           setOrders((prev) => {
             if (page === 1) return data;
-            
-            const existingIds = new Set(prev.map(o => o.id));
-            const newOrders = data.filter(o => !existingIds.has(o.id));
+            const existingIds = new Set(prev.map((o) => o.id));
+            const newOrders = data.filter((o) => !existingIds.has(o.id));
             return [...prev, ...newOrders];
           });
-          
+
           setIsInitialLoading(false);
           setIsTabLoading(false);
           setIsFetchingMore(false);
@@ -241,10 +234,8 @@ export default function OrderList() {
     return () => {
       isMounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, page, refreshKey]); // โหลดใหม่เมื่อ แท็บ, หน้า, หรือคีย์รีเฟรชเปลี่ยน
+  }, [activeTab, page, refreshKey]);
 
-  // 🌟 Firebase Listener: เมื่อมีการอัปเดต ให้รีเซ็ตกลับไปหน้า 1 เสมอเพื่อให้ได้คิวล่าสุด
   useEffect(() => {
     let isFirstFirebaseLoad = true;
     let debounceTimer: ReturnType<typeof setTimeout>;
@@ -257,9 +248,8 @@ export default function OrderList() {
       }
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        // เมื่อมีสัญญาณอัปเดต สั่งกลับไปโหลดหน้า 1 ใหม่ทั้งหมด
         setPage(1);
-        setRefreshKey(prev => prev + 1);
+        setRefreshKey((prev) => prev + 1);
       }, 1000);
     });
 
@@ -284,9 +274,13 @@ export default function OrderList() {
     navigate(`/orders/${orderId}`);
   };
 
-  const handleToggleOrder = (e: React.MouseEvent, orderId: string, status: string) => {
-    e.stopPropagation(); 
-    if (status !== "preparing" && status !== "ready") return; 
+  const handleToggleOrder = (
+    e: React.MouseEvent,
+    orderId: string,
+    status: string,
+  ) => {
+    e.stopPropagation();
+    if (status !== "preparing" && status !== "ready") return;
     setSelectedOrders((prev) => {
       if (prev.includes(orderId)) return prev.filter((id) => id !== orderId);
       return [...prev, orderId];
@@ -298,12 +292,12 @@ export default function OrderList() {
       const payload = selectedOrders.map((orderId, index) => ({
         order_id: orderId,
         rider_id: riderId,
-        queue_number: index + 1 
+        queue_number: index + 1,
       }));
 
       await assignBulkOrders(payload);
       setIsModalOpen(false);
-      setSelectedOrders([]); 
+      setSelectedOrders([]);
       alert(`มอบหมายสำเร็จ ${selectedOrders.length} รายการ (จัดคิวเรียบร้อย)!`);
     } catch (error: any) {
       alert(`เกิดข้อผิดพลาดในการมอบหมายงาน: ${error.message}`);
@@ -311,24 +305,34 @@ export default function OrderList() {
   };
 
   const handleCompleteOrder = async (e: React.MouseEvent, orderId: string) => {
-    e.stopPropagation(); 
-    const confirmComplete = window.confirm("ยืนยันว่าออเดอร์นี้จัดส่งเสร็จสิ้นแล้วใช่หรือไม่?");
+    e.stopPropagation();
+    const confirmComplete = window.confirm(
+      "ยืนยันว่าออเดอร์นี้จัดส่งเสร็จสิ้นแล้วใช่หรือไม่?",
+    );
     if (!confirmComplete) return;
 
     try {
-      const token = localStorage.getItem("auth_token") || localStorage.getItem("firebase_token") || "";
+      const token =
+        localStorage.getItem("auth_token") ||
+        localStorage.getItem("firebase_token") ||
+        "";
       const userDataString = localStorage.getItem("userData");
-      const currentUser = userDataString ? JSON.parse(userDataString) : { uid: "admin" };
+      const currentUser = userDataString
+        ? JSON.parse(userDataString)
+        : { uid: "admin" };
       const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-      const response = await fetch(`${apiUrl}/api/orders/orders_put/${orderId}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+      const response = await fetch(
+        `${apiUrl}/api/orders/orders_put/${orderId}/status`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ user_id: currentUser.uid, status: "money" }),
         },
-        body: JSON.stringify({ user_id: currentUser.uid, status: "delivered" })
-      });
+      );
 
       const json = await response.json();
       if (!response.ok || !json.success) {
@@ -340,7 +344,6 @@ export default function OrderList() {
     }
   };
 
-  // 🌟 ดักจับ Scroll ถ้าใกล้สุดขอบล่าง และยังมีข้อมูลเหลือ ให้สั่งบวก Page (API จะยิงอัตโนมัติ)
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     if (scrollHeight - scrollTop <= clientHeight + 100) {
@@ -354,7 +357,9 @@ export default function OrderList() {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-gray-900">
         <div className="w-12 h-12 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-500 dark:text-gray-400 font-medium animate-pulse">กำลังโหลดรายการออเดอร์...</p>
+        <p className="text-gray-500 dark:text-gray-400 font-medium animate-pulse">
+          กำลังโหลดรายการออเดอร์...
+        </p>
       </div>
     );
   }
@@ -362,208 +367,305 @@ export default function OrderList() {
   if (error) {
     return (
       <div className="h-full p-6 w-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <p className="text-red-500">{error}</p>
+        <div className="bg-red-50 dark:bg-red-900/20 px-6 py-4 rounded-2xl border border-red-200 dark:border-red-800">
+          <p className="text-red-600 dark:text-red-400 font-medium text-center">
+            {error}
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="h-full w-full flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 overflow-hidden">
-      
       {/* ส่วน Header */}
-      <div className="shrink-0 p-6 pb-2 border-gray-200 dark:border-gray-700 z-10 bg-gray-50 dark:bg-gray-900">
-        <h1 className="text-xl font-bold mb-4">จัดการออเดอร์</h1>
+      <div className="shrink-0 px-5 pt-5 pb-4 border-b border-gray-200 dark:border-gray-800 z-10 bg-white dark:bg-gray-900 shadow-sm">
+        <h1 className="text-2xl font-black tracking-tight mb-4 text-gray-900 dark:text-white">
+          จัดการออเดอร์
+        </h1>
 
         {/* UI ส่วน Tabs */}
-        <div className="flex bg-white dark:bg-gray-800 p-1.5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="flex bg-gray-100/80 dark:bg-gray-800 p-1.5 rounded-2xl shadow-inner border border-gray-200/50 dark:border-gray-700/50">
           <button
             onClick={() => {
               if (activeTab !== "kitchen") {
                 setActiveTab("kitchen");
                 setSelectedOrders([]);
-                setOrders([]); // เคลียร์ UI รอรับข้อมูลใหม่
-                setPage(1);    // รีเซ็ตเลขหน้า
+                setOrders([]);
+                setPage(1);
                 setHasMore(true);
+                setIsTabLoading(true);
               }
             }}
-            className={`flex-1 flex flex-col items-center justify-center py-2.5 text-sm font-bold rounded-lg transition-all ${
+            className={`flex-1 flex flex-col items-center justify-center py-2.5 text-sm font-bold rounded-xl transition-all duration-300 ${
               activeTab === "kitchen"
-                ? "bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 shadow-sm"
-                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                ? "bg-white dark:bg-gray-700 text-orange-600 dark:text-orange-400 shadow-[0_2px_8px_rgba(0,0,0,0.08)] ring-1 ring-black/5 dark:ring-white/10"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
             }`}
           >
-            <span>ออเดอร์ใหม่ 🍳</span>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🍳</span>
+              <span>ออเดอร์ใหม่</span>
+            </div>
           </button>
           <button
             onClick={() => {
               if (activeTab !== "delivery") {
                 setActiveTab("delivery");
                 setSelectedOrders([]);
-                setOrders([]); // เคลียร์ UI รอรับข้อมูลใหม่
-                setPage(1);    // รีเซ็ตเลขหน้า
+                setOrders([]);
+                setPage(1);
                 setHasMore(true);
+                setIsTabLoading(true);
               }
             }}
-            className={`flex-1 flex flex-col items-center justify-center py-2.5 text-sm font-bold rounded-lg transition-all ${
+            className={`flex-1 flex flex-col items-center justify-center py-2.5 text-sm font-bold rounded-xl transition-all duration-300 ${
               activeTab === "delivery"
-                ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 shadow-sm"
-                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-[0_2px_8px_rgba(0,0,0,0.08)] ring-1 ring-black/5 dark:ring-white/10"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
             }`}
           >
-            <span>การจัดส่ง 🛵</span>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🛵</span>
+              <span>การจัดส่ง</span>
+            </div>
           </button>
         </div>
       </div>
 
       {/* ส่วนแสดงรายการออเดอร์ พร้อมรับ Scroll */}
-      <div 
-        className="flex-1 overflow-y-auto px-6 pb-[10px] xl:pb-24 pt-4 space-y-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-        onScroll={handleScroll} 
+      <div
+        className="flex-1 overflow-y-auto px-4 pb-6 xl:pb-28 pt-4 space-y-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-gray-50/50 dark:bg-gray-900"
+        onScroll={handleScroll}
       >
         {isTabLoading ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="w-8 h-8 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin mb-3"></div>
-            <p className="text-gray-500 text-sm animate-pulse">กำลังโหลดข้อมูลแท็บนี้...</p>
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="w-10 h-10 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin mb-4 shadow-sm"></div>
+            <p className="text-gray-500 font-medium animate-pulse">
+              กำลังโหลดข้อมูลแท็บนี้...
+            </p>
           </div>
         ) : (
           <>
             {orders.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">ไม่มีออเดอร์ในหมวดหมู่นี้</div>
+              <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500">
+                <span className="text-6xl mb-4 opacity-50">📂</span>
+                <p className="text-lg font-medium">ไม่มีออเดอร์ในหมวดหมู่นี้</p>
+              </div>
             ) : (
               orders.map((order) => {
-                const statusConfig = getStatusConfig((order.status as OrderStatus) || "new");
-                const isSelectable = order.status === "preparing" || order.status === "ready";
+                const statusConfig = getStatusConfig(
+                  (order.status as OrderStatus) || "new",
+                );
+                const isSelectable =
+                  order.status === "preparing" || order.status === "ready";
                 const selectionIndex = selectedOrders.indexOf(order.id);
                 const isSelected = selectionIndex !== -1;
+
+                // ดึงข้อมูล Rider จาก Backend
+                const riderData =
+                  (order as any).rider_name || (order as any).rider_profile;
+                let riderNameStr = "ไรเดอร์ทั่วไป";
+                let riderPhoto = "";
+
+                if (riderData) {
+                  if (typeof riderData === "string") {
+                    riderNameStr = riderData;
+                  } else {
+                    riderNameStr =
+                      riderData.displayName ||
+                      riderData.name ||
+                      "ไรเดอร์ทั่วไป";
+                    riderPhoto = riderData.photoURL || "";
+                  }
+                }
+
+                if (!riderPhoto) {
+                  riderPhoto = `https://ui-avatars.com/api/?name=${encodeURIComponent(riderNameStr)}&background=10b981&color=fff&rounded=true&bold=true`;
+                }
 
                 return (
                   <div
                     key={order.id}
                     onClick={() => handleOrderClick(order.id)}
-                    className={`bg-white dark:bg-gray-800 rounded-2xl border ${
-                      isSelected ? "border-emerald-500 shadow-md" : "border-gray-200 dark:border-gray-700 shadow-sm"
-                    } overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-200`}
+                    className={`group relative bg-white dark:bg-gray-800/90 rounded-2xl border overflow-hidden cursor-pointer transition-all duration-300 ${
+                      isSelected
+                        ? "border-emerald-500 shadow-[0_4px_20px_rgb(16,185,129,0.15)] ring-1 ring-emerald-500"
+                        : "border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:-translate-y-0.5"
+                    }`}
                   >
-                    <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
-                      <div className="flex justify-between items-start gap-4">
-                        
+                    {/* Header ของ Card */}
+                    <div className="px-4 py-3 border-b border-gray-50 dark:border-gray-700/50 flex justify-between items-start gap-3">
+                      <div className="flex items-start gap-3 flex-1">
+                        {/* 🌟 ปุ่ม Checkbox จัดคิว (มีเฉพาะแท็บ Kitchen) ย่อขนาดลง */}
                         {activeTab === "kitchen" && (
                           <div
-                            onClick={(e) => handleToggleOrder(e, order.id, order.status)}
-                            className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border-2 text-sm font-bold transition-all select-none ${
+                            onClick={(e) =>
+                              handleToggleOrder(e, order.id, order.status)
+                            }
+                            className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-xl border-2 text-[15px] font-black transition-all duration-300 select-none shadow-sm ${
                               !isSelectable
-                                ? "bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed opacity-50"
+                                ? "bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-600"
                                 : isSelected
-                                ? "bg-emerald-500 border-emerald-500 text-white transform scale-105"
-                                : "bg-white border-gray-300 text-transparent hover:border-emerald-400"
+                                  ? "bg-gradient-to-br from-emerald-400 to-emerald-600 border-transparent text-white transform scale-105 shadow-emerald-500/30"
+                                  : "bg-white border-gray-200 text-transparent hover:border-emerald-400 dark:bg-gray-700 dark:border-gray-600 dark:hover:border-emerald-500"
                             }`}
                           >
                             {isSelected ? selectionIndex + 1 : ""}
                           </div>
                         )}
 
-                        <div className="flex-1">
-                          <h2 className="text-lg font-bold text-gray-900 dark:text-white truncate">
+                        <div className="flex-1 min-w-0">
+                          <h2 className="text-[15px] font-bold text-gray-900 dark:text-white truncate">
                             {order.shipping?.recipient || "ไม่ระบุชื่อ"}
                           </h2>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap gap-2">
-                            <span>{order.id}</span>
-                            <span>•</span>
+                          <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap items-center gap-1.5">
+                            <span className="opacity-80">#{order.id.slice(-6)}</span>
+                            <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
                             <span>{formatDate(order.created_at)}</span>
                           </div>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusConfig.bgColor} ${statusConfig.textColor}`}>
-                          {statusConfig.label}
+                      </div>
+
+                      {/* ป้าย Status */}
+                      <span
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap flex items-center gap-1.5 ${statusConfig.bgColor} ${statusConfig.textColor}`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor} animate-pulse`}
+                        ></span>
+                        {statusConfig.label}
+                      </span>
+                    </div>
+
+                    {/* ข้อมูล Rider แสดงแบบแถบเล็กกระทัดรัด */}
+                    {activeTab === "delivery" && order.rider_id && order.rider_id !== "" && (
+                      <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-50 dark:border-gray-700/50 bg-blue-50/60 dark:bg-blue-900/10">
+                        <img
+                          src={riderPhoto}
+                          alt="Rider"
+                          className="w-6 h-6 rounded-full object-cover border border-white dark:border-gray-700 shadow-sm"
+                        />
+                        <span className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
+                          ผู้จัดส่ง: <span className="font-bold text-gray-800 dark:text-white ml-1">{riderNameStr}</span>
                         </span>
                       </div>
-                    </div>
+                    )}
 
-                    <div className="px-5 py-3 space-y-2 bg-gray-50/50 dark:bg-gray-800/50">
+                    {/* รายการอาหารหลัก (ซ่อนราคาและซ่อน Add-on) */}
+                    <div className="px-4 py-2 space-y-1 bg-gray-50/30 dark:bg-gray-800/30">
                       {order.mainItems?.map((item, index) => (
-                        <div key={index} className="flex justify-between text-sm">
-                          <span className="text-gray-600 dark:text-gray-300">
-                            {item.name} <span className="text-gray-400">x{item.quantity}</span>
-                          </span>
-                          <span className="font-medium text-gray-800 dark:text-gray-200">
-                            ฿{item.subtotal?.toLocaleString()}
-                          </span>
-                        </div>
-                      ))}
-                      {order.addOnItems?.map((item, index) => (
-                        <div key={index} className="flex justify-between text-sm italic">
-                          <span className="text-gray-500 dark:text-gray-400">
-                            {item.name} <span className="text-gray-400">x{item.quantity}</span>
-                          </span>
-                          <span className="text-gray-500 dark:text-gray-400">
-                            ฿{item.subtotal?.toLocaleString()}
+                        <div
+                          key={index}
+                          className="flex justify-between items-center text-[13px]"
+                        >
+                          <span className="text-gray-700 dark:text-gray-300 truncate pr-2">
+                            {item.name}
+                            <span className="text-emerald-600 dark:text-emerald-400 ml-1.5 font-bold">
+                              x{item.quantity}
+                            </span>
                           </span>
                         </div>
                       ))}
                     </div>
 
-                    <div className="px-5 py-4 bg-white dark:bg-gray-800">
-                      <div className="flex justify-between items-center text-sm text-gray-600 dark:text-gray-400 mb-3">
-                        <div className="flex items-center gap-1">
-                          <span>📍</span>
-                          <span className="truncate max-w-[200px]">
+                    {/* Footer (ที่อยู่ + สถานะอุปกรณ์ & ช่องทางชำระเงิน) */}
+                    <div className="px-4 py-3 bg-white dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700/50 flex flex-col gap-2">
+                      <div className="flex items-start justify-between gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                        <div className="flex items-start gap-1.5 flex-1">
+                          <span className="text-red-400 shrink-0 mt-0.5">📍</span>
+                          <span className="line-clamp-2 leading-relaxed">
                             {order.shipping?.address || "ไม่มีที่อยู่"}
                           </span>
                         </div>
+                        
+                        {/* สถานะอุปกรณ์ รับเตากระทะ */}
+                        {order.equipment?.needEquipment && (
+                          <span className="shrink-0 bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400 px-2 py-0.5 rounded-md font-semibold border border-orange-100 dark:border-orange-800/30">
+                            รับเตากระทะ {Math.max(order.equipment.stoveCount || 1, order.equipment.panCount || 1)} ชุด
+                          </span>
+                        )}
                       </div>
-                      <div className="flex justify-between items-center border-t border-gray-100 dark:border-gray-700 pt-3">
-                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">ยอดรวมทั้งสิ้น</span>
-                        <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
+
+                      {/* ช่องทางชำระเงิน */}
+                      <div className="flex justify-between items-end mt-1">
+                        <span className="text-[13px] font-bold text-gray-800 dark:text-gray-200">
+                          {order.payment?.method === "cash" ? "💵 เงินสดปลายทาง" : 
+                           order.payment?.method === "promptpay" || order.payment?.method === "transfer" ? "📱 โอนเงิน / สแกนจ่าย" : 
+                           order.payment?.method ? order.payment.method.toUpperCase() : "ไม่ระบุ"}
+                        </span>
+                        <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                           ฿{order.totals?.grandTotal?.toLocaleString()}
                         </span>
                       </div>
                     </div>
 
-                    {activeTab === "delivery" && order.status !== "ready" && order.status !== "shipping" && (
-                      <div className="px-5 py-3 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 flex justify-end">
-                        <button
-                          onClick={(e) => handleCompleteOrder(e, order.id)}
-                          className="px-6 py-2 rounded-xl font-bold shadow-sm transition-all flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white active:scale-95"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                          </svg>
-                          เสร็จสิ้นแล้ว
-                        </button>
-                      </div>
-                    )}
-                    
+                    {/* ปุ่ม Action (แท็บการจัดส่ง) */}
+                    {activeTab === "delivery" &&
+                      order.status !== "ready" &&
+                      order.status !== "shipping" && (
+                        <div className="px-4 pb-4 bg-white dark:bg-gray-800/80 border-t-0">
+                          <button
+                            onClick={(e) => handleCompleteOrder(e, order.id)}
+                            className="w-full py-2.5 rounded-xl font-bold text-[14px] shadow-sm transition-all flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white active:scale-[0.98]"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2.5"
+                                d="M5 13l4 4L19 7"
+                              ></path>
+                            </svg>
+                            ยืนยันรับเงิน / ส่งสำเร็จ
+                          </button>
+                        </div>
+                      )}
                   </div>
                 );
               })
             )}
 
-            {/* 🌟 แสดงไอคอนโหลดต่อท้าย เมื่อเลื่อนจนสุดแล้ว API กำลังทำงาน */}
+            {/* แสดงไอคอนโหลดต่อท้าย */}
             {isFetchingMore && hasMore && (
-              <div className="py-4 text-center">
-                <div className="inline-block w-6 h-6 border-2 border-gray-300 border-t-emerald-500 rounded-full animate-spin"></div>
-                <p className="text-xs text-gray-400 mt-2">กำลังโหลดเพิ่มเติม...</p>
+              <div className="py-6 flex flex-col items-center justify-center">
+                <div className="inline-block w-8 h-8 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin shadow-sm"></div>
+                <p className="text-sm font-medium text-gray-500 mt-3 animate-pulse">
+                  กำลังโหลดเพิ่มเติม...
+                </p>
               </div>
             )}
-            
           </>
         )}
       </div>
 
       {/* แถบมอบหมายงานด้านล่าง */}
       <div
-        className={`fixed bottom-[76px] xl:bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_10px_rgba(0,0,0,0.1)] p-4 flex justify-between items-center transition-all duration-300 z-40 ${
-          selectedOrders.length > 0 
-            ? "opacity-100 translate-y-0" 
-            : "opacity-0 translate-y-10 pointer-events-none"
+        className={`fixed bottom-[76px] xl:bottom-0 left-0 right-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] p-3 sm:p-4 flex justify-between items-center transition-all duration-400 z-40 ${
+          selectedOrders.length > 0
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-20 pointer-events-none"
         }`}
       >
-        <div className="ml-8 text-gray-700 dark:text-gray-300 font-medium">
-          เลือกแล้ว <span className="text-emerald-600 text-xl font-bold mx-1">{selectedOrders.length}</span> รายการ
+        <div className="ml-2 sm:ml-8 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
+            <span className="text-emerald-600 dark:text-emerald-400 text-lg font-black">
+              {selectedOrders.length}
+            </span>
+          </div>
+          <div className="text-gray-700 dark:text-gray-300 font-bold text-sm sm:text-base hidden sm:block">
+            เลือกออเดอร์แล้ว
+          </div>
         </div>
-        <div className="mr-8">
+        <div className="mr-2 sm:mr-8">
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all hover:shadow-lg"
+            className="px-6 sm:px-10 py-3 bg-gradient-to-r from-gray-900 to-gray-800 dark:from-emerald-500 dark:to-emerald-600 hover:from-black hover:to-gray-900 dark:hover:from-emerald-400 dark:hover:to-emerald-500 text-white font-bold rounded-xl shadow-md transition-all active:scale-95"
           >
             มอบหมายงาน
           </button>
