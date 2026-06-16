@@ -179,7 +179,7 @@ const SelectMaps = ({ onLocationConfirm }: SelectMapsProps) => {
       <div className="flex-1 relative w-full h-full">
         <Map
           {...viewState}
-          onMoveEnd={(evt) => setViewState(evt.viewState)}
+          onMove={(evt) => setViewState(evt.viewState)}
           mapStyle="mapbox://styles/janos2001/cmq4te5bc007c01s3f63xa5ll"
           mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
           style={{ width: "100%", height: "100%" }}

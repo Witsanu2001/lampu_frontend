@@ -477,7 +477,7 @@ export default function Payment() {
               )}
 
               {/* อัปโหลดรูปบ้าน (ซ่อนหาก Admin เลือกว่าเป็นการนัดรับ) */}
-              {!(isAdmin && isMeetup) && (
+              {(isAdmin && isMeetup) && (
                 <div className="mt-4">
                   <label className="block text-sm font-semibold text-gray-800 dark:text-white mb-2">อัปโหลดรูปบ้าน (ถ้ามี) 📷</label>
                   <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-500 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors">

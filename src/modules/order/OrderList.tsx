@@ -330,7 +330,7 @@ export default function OrderList() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ user_id: currentUser.uid, status: "money" }),
+          body: JSON.stringify({ user_id: currentUser.uid, status: "pending" }),
         },
       );
 
