@@ -86,10 +86,13 @@ export default function Login({ setUser }: LoginProps) {
     try {
       // ตรวจสอบว่า LIFF พร้อมหรือยัง
       if (!liff.isLoggedIn()) {
-        liff.login({ redirectUri: window.location.href });
+        // 🌟 แก้ไขจุดที่ 1: เปลี่ยนเป้าหมายกลับไปที่หน้าแรกสุด (Root URL) เสมอ
+        // ป้องกันไม่ให้ React Router เตะผู้ใช้กลับเพราะหาข้อมูลไม่ทัน
+        liff.login({ redirectUri: window.location.origin });
       } else {
-        // ถ้าล็อกอินอยู่แล้ว ให้รีเฟรชหน้าเพื่อไปรัน logic ใน App.tsx ใหม่
-        window.location.reload();
+        // 🌟 แก้ไขจุดที่ 2: ถ้า LIFF บอกว่าล็อกอินค้างไว้อยู่แล้ว 
+        // ให้ยิงกลับไปที่หน้าแรกสุดเพื่อโหลดข้อมูลใหม่เลย ไม่ต้อง reload หน้า login ซ้ำ
+        window.location.href = "/";
       }
     } catch (err) {
       console.error("LINE Login Error:", err);

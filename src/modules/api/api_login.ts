@@ -2,7 +2,7 @@
 
 import { getFreshToken } from "../../shared/infra/auth/token";
 
-const apiUrl = import.meta.env.VITE_API_URL;
+const apiUrl = import.meta.env.VITE_API_URL || "https://api-gateway-879165280409.asia-southeast1.run.app";
 
 export async function postLineAuth(lineIdToken: string): Promise<Response> {
 

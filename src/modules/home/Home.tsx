@@ -22,18 +22,51 @@ export default function Home() {
 
   useEffect(() => {
     const fetchMainMenus = async () => {
-      setIsLoading(true);
-      try {
-        // 🌟 ใช้ฟังก์ชัน getListMenu ที่เราเขียนไว้ แทนการ Fetch ตรงๆ
-        const data = await getListMenu();
+      console.log("🍔 Home: Fetching menus...");
+      
+      // 🌟 รอให้ token พร้อมก่อนเรียก API
+      let retries = 0;
+      const maxRetries = 3;
+      
+      while (retries < maxRetries) {
+        try {
+          setIsLoading(true);
+          
+          // 🌟 เช็คว่า token พร้อมหรือไม่
+          const token = localStorage.getItem('auth_token');
+          if (!token) {
+            console.log(`⏳ Token not ready, retrying... (${retries + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            retries++;
+            
+            // 🌟 ถ้า retry ครบแล้ว token ยังไม่พร้อม ให้หยุด loading
+            if (retries >= maxRetries) {
+              console.error("❌ Token not ready after retries");
+              setIsLoading(false);
+            }
+            continue;
+          }
+          
+          console.log("✅ Token ready, fetching menus...");
+          const data = await getListMenu();
 
-        // กรองเฉพาะที่ available
-        setMooKrataMenus(data.filter((item) => item.available));
-      } catch (error) {
-        console.error("Error fetching main menus:", error);
-        // อาจเพิ่มการแจ้งเตือน Error ตรงนี้
-      } finally {
-        setIsLoading(false);
+          // กรองเฉพาะที่ available
+          setMooKrataMenus(data.filter((item) => item.available));
+          console.log("✅ Menus fetched successfully");
+          setIsLoading(false);
+          return; // สำเร็จแล้ว ออกจาก loop
+        } catch (error) {
+          console.error("Error fetching main menus:", error);
+          retries++;
+          
+          if (retries >= maxRetries) {
+            console.error("❌ Failed to fetch menus after retries");
+            setIsLoading(false);
+          } else {
+            console.log(`🔄 Retrying... (${retries}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
       }
     };
 
