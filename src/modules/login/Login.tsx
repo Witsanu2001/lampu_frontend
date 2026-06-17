@@ -36,14 +36,29 @@ export default function Login({ setUser }: LoginProps) {
       const idToken = await user.getIdToken(true);
       setToken(idToken, 24);
 
-      // (Logic เดิมในการ Sync ข้อมูลของคุณ)
-      const updatedUser = {
+      // 🌟 1. สร้าง Payload ไปยิง API (ยังไม่ใส่ role)
+      const payload = {
         uid: user.uid,
         email: user.email,
-        role: "user",
         provider: "email",
       };
-      await postUsersSync(updatedUser);
+      
+      // 🌟 2. ยิง API และรอรับ Response กลับมาเพื่อเอา Role
+      const syncRes = await postUsersSync(payload);
+      let actualRole = "user"; // ให้ user เป็นค่าเริ่มต้นเผื่อ API พัง
+      
+      if (syncRes.ok) {
+        const resData = await syncRes.json();
+        // 🎯 ดึง role จาก Backend (รองรับทั้งแบบ resData.role และ resData.data.role)
+        actualRole = resData.data?.role || resData?.role || "user";
+      }
+
+      // 🌟 3. ประกอบร่าง User ใหม่โดยใช้ Role จาก API จริๆ
+      const updatedUser = {
+        ...payload,
+        role: actualRole, 
+      };
+
       setUser(updatedUser);
       localStorage.setItem("userData", JSON.stringify(updatedUser));
     } catch (err: any) {
@@ -62,14 +77,50 @@ export default function Login({ setUser }: LoginProps) {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // หลังจาก login สำเร็จ ส่งไป sync ที่ backend เหมือนเดิม
-      const updatedUser = {
+      // 🌟 1. ดึง Access Token ของ Facebook เพื่อเอาไปยิง Graph API ขอรูปภาพขนาดชัดๆ แบบใน App.tsx
+      const credential = FacebookAuthProvider.credentialFromResult(result);
+      const token = credential?.accessToken;
+
+      let fbName = user.displayName || "";
+      let fbPic = user.photoURL || "";
+
+      if (token) {
+        try {
+          const response = await fetch(
+            `https://graph.facebook.com/me?fields=id,name,email,picture.width(500).height(500)&access_token=${token}`,
+          );
+          const data = await response.json();
+          if (data?.name) fbName = data.name;
+          if (data?.picture?.data?.url) fbPic = data.picture.data.url;
+        } catch (fetchErr) {
+          console.error("Error fetching Facebook Graph API:", fetchErr);
+        }
+      }
+
+      // 🌟 2. เพิ่ม displayName และ photoURL เข้าไปใน Payload เพื่อส่งไปที่ Backend
+      const payload = {
         uid: user.uid,
         email: user.email,
-        role: "user",
+        displayName: fbName,
+        photoURL: fbPic,
         provider: "facebook",
       };
-      await postUsersSync(updatedUser);
+      
+      // ส่งไป sync ที่ backend พร้อมข้อมูลชื่อและรูปภาพ
+      const syncRes = await postUsersSync(payload);
+      let actualRole = "user";
+      
+      if (syncRes.ok) {
+        const resData = await syncRes.json();
+        actualRole = resData.data?.role || resData?.role || "user";
+      }
+
+      // 🌟 3. ประกอบร่าง User Object ให้มีข้อมูลครบถ้วนก่อนบันทึกใช้งานในระบบ
+      const updatedUser = {
+        ...payload,
+        role: actualRole,
+      };
+
       setUser(updatedUser);
       localStorage.setItem("userData", JSON.stringify(updatedUser));
     } catch (err: any) {
