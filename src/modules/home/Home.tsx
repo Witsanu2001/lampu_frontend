@@ -19,58 +19,47 @@ export default function Home() {
   const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([]);
   const [mooKrataMenus, setMooKrataMenus] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
   useEffect(() => {
+    let isMounted = true;
+
     const fetchMainMenus = async () => {
       console.log("🍔 Home: Fetching menus...");
-      
-      // 🌟 รอให้ token พร้อมก่อนเรียก API
       let retries = 0;
       const maxRetries = 3;
-      
+
       while (retries < maxRetries) {
         try {
-          setIsLoading(true);
-          
-          // 🌟 เช็คว่า token พร้อมหรือไม่
-          const token = localStorage.getItem('auth_token');
+          // เช็ค Token
+          const token = localStorage.getItem("auth_token");
           if (!token) {
             console.log(`⏳ Token not ready, retrying... (${retries + 1}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise((resolve) => setTimeout(resolve, 500));
             retries++;
-            
-            // 🌟 ถ้า retry ครบแล้ว token ยังไม่พร้อม ให้หยุด loading
-            if (retries >= maxRetries) {
-              console.error("❌ Token not ready after retries");
-              setIsLoading(false);
-            }
             continue;
           }
-          
-          console.log("✅ Token ready, fetching menus...");
-          const data = await getListMenu();
 
-          // กรองเฉพาะที่ available
-          setMooKrataMenus(data.filter((item) => item.available));
-          console.log("✅ Menus fetched successfully");
-          setIsLoading(false);
-          return; // สำเร็จแล้ว ออกจาก loop
-        } catch (error) {
-          console.error("Error fetching main menus:", error);
-          retries++;
+          const data = await getListMenu();
           
-          if (retries >= maxRetries) {
-            console.error("❌ Failed to fetch menus after retries");
+          if (isMounted) {
+            setMooKrataMenus(data.filter((item: any) => item.available));
             setIsLoading(false);
+            console.log("✅ Menus fetched successfully");
+            return; 
+          }
+        } catch (error) {
+          console.error("Error fetching menus:", error);
+          retries++;
+          if (retries >= maxRetries) {
+            if (isMounted) setIsLoading(false);
           } else {
-            console.log(`🔄 Retrying... (${retries}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 1000));
           }
         }
       }
     };
 
     fetchMainMenus();
+    return () => { isMounted = false; };
   }, []);
 
   const handleAddToCart = (
@@ -116,6 +105,25 @@ export default function Home() {
       setFlyingItems((prev) => prev.filter((item) => item.id !== id));
     }, 700);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <div className="w-14 h-14 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin"></div>
+        <p className="text-gray-500 dark:text-gray-400 font-medium text-lg animate-pulse">
+           กำลังเตรียมเมนูความอร่อย...
+        </p>
+      </div>
+    );
+  }
+
+  if (mooKrataMenus.length === 0) {
+    return (
+      <div className="text-center py-20 text-gray-500 dark:text-gray-400 text-lg">
+        ขออภัย ขณะนี้ยังไม่มีเมนูหลักเปิดให้บริการ
+      </div>
+    );
+  }
 
   return (
     <div className="h-full p-6 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-200">
