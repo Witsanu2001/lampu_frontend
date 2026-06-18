@@ -232,10 +232,10 @@ export default function Payment() {
         alert("กรุณากรอกเบอร์โทรศัพท์ของลูกค้าด้วยครับ");
         return;
       }
-      if (!location) {
-        alert("กรุณาเปิดแผนที่เพื่อปักหมุดที่อยู่ หรือจุดนัดรับก่อนครับ 📍");
-        return;
-      }
+      // if (!location) {
+      //   alert("กรุณาเปิดแผนที่เพื่อปักหมุดที่อยู่ หรือจุดนัดรับก่อนครับ 📍");
+      //   return;
+      // }
       if (adminAddressDetail.trim() === "") {
         const confirmProceed = window.confirm("ยังไม่ได้กรอกรายละเอียดที่อยู่ แน่ใจหรือไม่ที่จะไปต่อ?");
         if (!confirmProceed) return;
