@@ -13,14 +13,6 @@ import { getRiders } from "../api/api_user";
 import type { Order } from "../const/order";
 import { onValue, ref } from "firebase/database";
 import { db } from "../const/firebase";
-
-// Component Modal สำหรับเลือกไรเดอร์
-interface Rider {
-  uid: string;
-  name?: string;
-  email?: string;
-}
-
 const RiderModal = ({
   isOpen,
   onClose,
@@ -30,7 +22,7 @@ const RiderModal = ({
   onClose: () => void;
   onAssign: (riderId: string) => void;
 }) => {
-  const [riders, setRiders] = useState<Rider[]>([]);
+  const [riders, setRiders] = useState<any[]>([]);
   const [selectedRiderId, setSelectedRiderId] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -66,6 +58,12 @@ const RiderModal = ({
 
   if (!isOpen) return null;
 
+  const availableRiders = riders.filter(
+    (rider) =>
+      rider.jobs_event?.status !== "pending" &&
+      rider.jobs_event?.status !== "start",
+  );
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all">
       <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl w-full max-w-sm shadow-2xl border border-gray-100 dark:border-gray-700">
@@ -79,12 +77,12 @@ const RiderModal = ({
           </div>
         ) : (
           <div className="space-y-2 mb-6 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-            {riders.length === 0 ? (
+            {availableRiders.length === 0 ? (
               <p className="text-center text-gray-500 py-4">
-                ไม่พบข้อมูลไรเดอร์
+                ไม่พบข้อมูลไรเดอร์ที่ว่างในขณะนี้
               </p>
             ) : (
-              riders.map((rider) => (
+              availableRiders.map((rider) => (
                 <label
                   key={rider.uid}
                   className={`flex items-center space-x-3 cursor-pointer p-3 rounded-2xl border transition-all ${
@@ -99,11 +97,35 @@ const RiderModal = ({
                     value={rider.uid}
                     checked={selectedRiderId === rider.uid}
                     onChange={(e) => setSelectedRiderId(e.target.value)}
-                    className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-gray-300"
+                    className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 shrink-0"
                   />
-                  <span className="text-gray-700 dark:text-gray-200 font-medium">
-                    {rider.name || rider.email}
-                  </span>
+
+                  <img
+                    src={
+                      rider.photoURL ||
+                      `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                        rider.displayName,
+                      )}&background=random&color=fff`
+                    }
+                    alt={rider.displayName}
+                    className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-600 shrink-0 bg-white"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null;
+                      target.src =
+                        "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
+                    }}
+                  />
+
+                  <div className="flex justify-between w-full">
+                    <span className="text-gray-700 dark:text-gray-200 font-medium">
+                      {rider.displayName}
+                    </span>
+
+                    <span className="text-gray-700 dark:text-gray-200 font-medium">
+                      🛵 {rider.jobs_event?.total_order_sets || "0"}
+                    </span>
+                  </div>
                 </label>
               ))
             )}
@@ -289,13 +311,28 @@ export default function OrderList() {
 
   const handleAssignJobs = async (riderId: string) => {
     try {
-      const payload = selectedOrders.map((orderId, index) => ({
-        order_id: orderId,
-        rider_id: riderId,
-        queue_number: index + 1,
-      }));
+      const payload = selectedOrders.map((orderId, index) => {
+        const targetOrder = orders.find((o) => o.id === orderId);
+
+        const totalOrderItemsQty =
+          targetOrder?.mainItems?.reduce(
+            (sum, item) => sum + (item.quantity || 0),
+            0,
+          ) || 0;
+
+        const shippingFee = targetOrder?.totals?.shippingFee || 0;
+
+        return {
+          order_id: orderId,
+          rider_id: riderId,
+          queue_number: index + 1,
+          order_set_qty: totalOrderItemsQty,
+          delivery_fee: shippingFee,
+        };
+      });
 
       await assignBulkOrders(payload);
+
       setIsModalOpen(false);
       setSelectedOrders([]);
       alert(`มอบหมายสำเร็จ ${selectedOrders.length} รายการ (จัดคิวเรียบร้อย)!`);
@@ -520,7 +557,9 @@ export default function OrderList() {
                             {order.shipping?.recipient || "ไม่ระบุชื่อ"}
                           </h2>
                           <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap items-center gap-1.5">
-                            <span className="opacity-80">#{order.id.slice(-6)}</span>
+                            <span className="opacity-80">
+                              #{order.id.slice(-6)}
+                            </span>
                             <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
                             <span>{formatDate(order.created_at)}</span>
                           </div>
@@ -539,18 +578,23 @@ export default function OrderList() {
                     </div>
 
                     {/* ข้อมูล Rider แสดงแบบแถบเล็กกระทัดรัด */}
-                    {activeTab === "delivery" && order.rider_id && order.rider_id !== "" && (
-                      <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-50 dark:border-gray-700/50 bg-blue-50/60 dark:bg-blue-900/10">
-                        <img
-                          src={riderPhoto}
-                          alt="Rider"
-                          className="w-6 h-6 rounded-full object-cover border border-white dark:border-gray-700 shadow-sm"
-                        />
-                        <span className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
-                          ผู้จัดส่ง: <span className="font-bold text-gray-800 dark:text-white ml-1">{riderNameStr}</span>
-                        </span>
-                      </div>
-                    )}
+                    {activeTab === "delivery" &&
+                      order.rider_id &&
+                      order.rider_id !== "" && (
+                        <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-50 dark:border-gray-700/50 bg-blue-50/60 dark:bg-blue-900/10">
+                          <img
+                            src={riderPhoto}
+                            alt="Rider"
+                            className="w-6 h-6 rounded-full object-cover border border-white dark:border-gray-700 shadow-sm"
+                          />
+                          <span className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
+                            ผู้จัดส่ง:{" "}
+                            <span className="font-bold text-gray-800 dark:text-white ml-1">
+                              {riderNameStr}
+                            </span>
+                          </span>
+                        </div>
+                      )}
 
                     {/* รายการอาหารหลัก (ซ่อนราคาและซ่อน Add-on) */}
                     <div className="px-4 py-2 space-y-1 bg-gray-50/30 dark:bg-gray-800/30">
@@ -573,16 +617,23 @@ export default function OrderList() {
                     <div className="px-4 py-3 bg-white dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700/50 flex flex-col gap-2">
                       <div className="flex items-start justify-between gap-2 text-[11px] text-gray-500 dark:text-gray-400">
                         <div className="flex items-start gap-1.5 flex-1">
-                          <span className="text-red-400 shrink-0 mt-0.5">📍</span>
+                          <span className="text-red-400 shrink-0 mt-0.5">
+                            📍
+                          </span>
                           <span className="line-clamp-2 leading-relaxed">
                             {order.shipping?.address || "ไม่มีที่อยู่"}
                           </span>
                         </div>
-                        
+
                         {/* สถานะอุปกรณ์ รับเตากระทะ */}
                         {order.equipment?.needEquipment && (
                           <span className="shrink-0 bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400 px-2 py-0.5 rounded-md font-semibold border border-orange-100 dark:border-orange-800/30">
-                            รับเตากระทะ {Math.max(order.equipment.stoveCount || 1, order.equipment.panCount || 1)} ชุด
+                            รับเตากระทะ{" "}
+                            {Math.max(
+                              order.equipment.stoveCount || 1,
+                              order.equipment.panCount || 1,
+                            )}{" "}
+                            ชุด
                           </span>
                         )}
                       </div>
@@ -590,9 +641,14 @@ export default function OrderList() {
                       {/* ช่องทางชำระเงิน */}
                       <div className="flex justify-between items-end mt-1">
                         <span className="text-[13px] font-bold text-gray-800 dark:text-gray-200">
-                          {order.payment?.method === "cash" ? "💵 เงินสดปลายทาง" : 
-                           order.payment?.method === "promptpay" || order.payment?.method === "transfer" ? "📱 โอนเงิน / สแกนจ่าย" : 
-                           order.payment?.method ? order.payment.method.toUpperCase() : "ไม่ระบุ"}
+                          {order.payment?.method === "cash"
+                            ? "💵 เงินสดปลายทาง"
+                            : order.payment?.method === "promptpay" ||
+                                order.payment?.method === "transfer"
+                              ? "📱 โอนเงิน / สแกนจ่าย"
+                              : order.payment?.method
+                                ? order.payment.method.toUpperCase()
+                                : "ไม่ระบุ"}
                         </span>
                         <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                           ฿{order.totals?.grandTotal?.toLocaleString()}

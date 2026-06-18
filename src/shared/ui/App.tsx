@@ -39,46 +39,30 @@ export default function App() {
     // 🌟 แก้ให้ initialize ใหม่ทุกครั้งที่ mount เพื่อให้ token พร้อมเสมอ
     const initializeSystem = async () => {
       try {
-        console.log("🚀 Initializing system...");
-        // 1. รอเช็คสถานะ Firebase ก่อนว่ามี Session ค้างไว้ไหม
         const fbUser = await new Promise<any>((resolve) => {
           const unsubscribe = onAuthStateChanged(auth, (u) => {
             unsubscribe();
             resolve(u);
           });
         });
-        console.log("🔍 Firebase user:", fbUser?.uid);
 
-        // 2. โหลด LIFF
         await liff.init({ liffId: LIFF_ID });
-        console.log("✅ LIFF initialized");
-
-        // 3. ถ้า Firebase ยังล็อกอินอยู่ (เคยเข้าแล้ว) ให้ใช้ข้อมูลเดิมได้เลย
-        // 🛑 ป้องกันไม่ให้ไปยิง API ใหม่บนมือถือ (ซึ่งเป็นต้นเหตุของ Load failed)
         if (fbUser) {
-          console.log("🔄 Firebase user found, refreshing token...");
           const token = await fbUser.getIdToken(true);
           setToken(token, 24);
-          console.log("✅ Token refreshed successfully");
           
           const savedUserStr = localStorage.getItem("userData");
           if (savedUserStr) {
             setUser(JSON.parse(savedUserStr));
           }
-          // 🌟 เพิ่ม delay เล็กน้อยเพื่อให้แน่ใจว่า token ถูก set ใน localStorage ก่อนปลดล็อก UI
           await new Promise(resolve => setTimeout(resolve, 100));
           setIsAppLoading(false);
-          console.log("✅ App loading finished, UI unlocked");
           return; 
         }
 
-        // 4. ถ้า Firebase หลุด แต่ LINE ยังล็อกอินอยู่ (เช่น เข้าแอปครั้งแรก)
         if (liff.isLoggedIn()) {
-          console.log("📱 LINE logged in, handling LINE user data...");
           await handleLineUserData();
         } else {
-          // ไม่ได้ล็อกอินอะไรเลย ปล่อยไปหน้า Login
-          console.log("⚠️ No login found, showing login page");
           setIsAppLoading(false);
         }
 

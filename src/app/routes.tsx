@@ -9,10 +9,6 @@ import { paymentRoutes } from "../modules/payment/route";
 import { orderUserRoutes } from "../modules/order_user/route";
 
 export const AppRoutes = ({ user, setUser }: { user: any, setUser: any }) => {
-
-  console.log('xxxxxx',user)
-  console.log("User Role:", user?.role);
-
   return (
     <Routes>
       <Route

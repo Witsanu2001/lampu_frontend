@@ -53,18 +53,11 @@ export const isAuthenticated = (): boolean => {
 }
 
 export async function getFreshToken(): Promise<string> {
-  console.log("🔑 getFreshToken called");
-  
-  // 🌟 1. เช็ค token ใน localStorage ก่อนว่ายังไม่หมดอายุหรือไม่
   const savedToken = getToken();
   if (savedToken && !isTokenExpired()) {
-    console.log("✅ Using existing token from localStorage");
     return savedToken;
   }
 
-  console.log("🔄 Token expired or not found, refreshing from Firebase...");
-  
-  // 2. รอสถานะจาก Firebase
   const user = await new Promise<any>((resolve) => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       unsubscribe();
@@ -76,16 +69,13 @@ export async function getFreshToken(): Promise<string> {
     try {
       const newToken = await user.getIdToken(true); 
       setToken(newToken, 24);
-      console.log("✅ Token refreshed from Firebase");
       return newToken;
     } catch (error) {
       console.error("Error getting fresh token:", error);
     }
   }
 
-  // 🌟 3. ถ้า Firebase เป็น null ให้หยิบจาก localStorage มาใช้ก่อน
   if (savedToken) {
-    console.log("⚠️ Using saved token even though expired");
     return savedToken;
   }
 

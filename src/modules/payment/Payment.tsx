@@ -75,9 +75,6 @@ export default function Payment() {
   const isAdmin = currentUser?.role === "admin";
   const [paymentMethod, setPaymentMethod] = useState("");
 
-  console.log('xxxxxxxxxxxx',currentUser?.role)
-
-  // ล็อกการชำระเงินเป็นปลายทางเสมอสำหรับแอดมิน
   useEffect(() => {
     if (isAdmin) {
       setPaymentMethod("เก็บเงินปลายทาง");

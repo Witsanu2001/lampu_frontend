@@ -23,7 +23,6 @@ export default function Home() {
     let isMounted = true;
 
     const fetchMainMenus = async () => {
-      console.log("🍔 Home: Fetching menus...");
       let retries = 0;
       const maxRetries = 3;
 
@@ -32,7 +31,6 @@ export default function Home() {
           // เช็ค Token
           const token = localStorage.getItem("auth_token");
           if (!token) {
-            console.log(`⏳ Token not ready, retrying... (${retries + 1}/${maxRetries})`);
             await new Promise((resolve) => setTimeout(resolve, 500));
             retries++;
             continue;
@@ -43,7 +41,6 @@ export default function Home() {
           if (isMounted) {
             setMooKrataMenus(data.filter((item: any) => item.available));
             setIsLoading(false);
-            console.log("✅ Menus fetched successfully");
             return; 
           }
         } catch (error) {
