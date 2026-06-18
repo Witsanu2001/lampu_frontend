@@ -415,13 +415,7 @@ export default function OrderList() {
 
   return (
     <div className="h-full w-full flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 overflow-hidden">
-      {/* ส่วน Header */}
       <div className="shrink-0 px-5 pt-5 pb-4 border-b border-gray-200 dark:border-gray-800 z-10 bg-white dark:bg-gray-900 shadow-sm">
-        <h1 className="text-2xl font-black tracking-tight mb-4 text-gray-900 dark:text-white">
-          จัดการออเดอร์
-        </h1>
-
-        {/* UI ส่วน Tabs */}
         <div className="flex bg-gray-100/80 dark:bg-gray-800 p-1.5 rounded-2xl shadow-inner border border-gray-200/50 dark:border-gray-700/50">
           <button
             onClick={() => {
