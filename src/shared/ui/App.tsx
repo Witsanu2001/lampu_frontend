@@ -10,7 +10,7 @@ import {
   FacebookAuthProvider,
   updateProfile,
   signInWithCustomToken,
-  onAuthStateChanged
+  onAuthStateChanged,
 } from "firebase/auth";
 import liff from "@line/liff";
 import "../../style/App.css";
@@ -31,12 +31,15 @@ export default function App() {
   });
 
   const location = useLocation();
-  const isPaymentPage = location.pathname === "/orders/payment";
-  const [isAppLoading, setIsAppLoading] = useState(true);
+  const isPaymentPage =
+  location.pathname === "/orders/payment" ||
+  /^\/orders_user\/[^/]+$/.test(location.pathname) ||
+  /^\/orders\/[^/]+$/.test(location.pathname) ||
+  /^\/settingsData\/[^/]+$/.test(location.pathname) ||
+  /^\/listData\/history\/detail\/[^/]+$/.test(location.pathname)
 
-  // 🌟 รวบการเช็ค Login ของ Firebase และ LINE ไว้ด้วยกัน เพื่อไม่ให้มันทำงานตีกัน
+  const [isAppLoading, setIsAppLoading] = useState(true);
   useEffect(() => {
-    // 🌟 แก้ให้ initialize ใหม่ทุกครั้งที่ mount เพื่อให้ token พร้อมเสมอ
     const initializeSystem = async () => {
       try {
         const fbUser = await new Promise<any>((resolve) => {
@@ -50,14 +53,14 @@ export default function App() {
         if (fbUser) {
           const token = await fbUser.getIdToken(true);
           setToken(token, 24);
-          
+
           const savedUserStr = localStorage.getItem("userData");
           if (savedUserStr) {
             setUser(JSON.parse(savedUserStr));
           }
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
           setIsAppLoading(false);
-          return; 
+          return;
         }
 
         if (liff.isLoggedIn()) {
@@ -65,7 +68,6 @@ export default function App() {
         } else {
           setIsAppLoading(false);
         }
-
       } catch (err) {
         console.error("System Init Error:", err);
         setIsAppLoading(false);
@@ -78,19 +80,23 @@ export default function App() {
   const handleLineUserData = async () => {
     try {
       const lineIdToken = liff.getIDToken();
-      if (!lineIdToken) throw new Error("ไม่พบ ID Token (ลืมเปิด openid ในระบบ LINE Developers หรือเปล่า?)");
+      if (!lineIdToken)
+        throw new Error(
+          "ไม่พบ ID Token (ลืมเปิด openid ในระบบ LINE Developers หรือเปล่า?)",
+        );
 
       const res = await postLineAuth(lineIdToken);
       if (!res.ok) throw new Error(`Backend ตอบกลับ Status: ${res.status}`);
       const data = await res.json();
 
-      if (!data.firebase_token) throw new Error("Backend ไม่ยอมส่ง Firebase Token กลับมาให้");
+      if (!data.firebase_token)
+        throw new Error("Backend ไม่ยอมส่ง Firebase Token กลับมาให้");
 
       const userCredential = await signInWithCustomToken(
         auth,
         data.firebase_token,
       );
-      
+
       const profile = await liff.getProfile();
       if (!profile) throw new Error("ดึง Profile จาก LINE ไม่สำเร็จ");
 
@@ -117,12 +123,11 @@ export default function App() {
       setUser(lineUser);
       localStorage.setItem("userData", JSON.stringify(lineUser));
       setIsAppLoading(false);
-
     } catch (err: any) {
       // 🌟 เด้ง Alert ขึ้นหน้าจอมือถือให้เห็นชัดๆ ว่าพังเพราะอะไร!
       alert(`🚨 ระบบขัดข้อง:\n${err.message}`);
       console.error("LINE Auth Error:", err);
-      
+
       if (!liff.isInClient()) liff.logout();
       localStorage.removeItem("userData");
       setUser(null);

@@ -2,7 +2,7 @@
 
 import Home from "../../assets/home.png";
 import Order from "../../assets/orderCheck.png";
-import Setting from "../../assets/settings.png";
+import List from "../../assets/list.png";
 import UserSetting from "../../assets/user-setting.png";
 import ShoppingList from "../../assets/shopping_list.png";
 
@@ -35,9 +35,9 @@ export const menuConfig: MenuItem[] = [
   },
   {
     label: "ตั้งค่า",
-    to: "/settings",
+    to: "/listData",
     roles: ["user"],
-    iconUrl: Setting,
+    iconUrl: List,
   },
   {
     label: "จัดการระบบ",

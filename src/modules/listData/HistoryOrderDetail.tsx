@@ -8,7 +8,7 @@ import type { Order } from "../const/order";
 import { getOrderById } from "../api/api_order";
 import { getFreshToken } from "../../shared/infra/auth/token";
 
-export default function OrderUserDetail() {
+export default function HistoryOrderDetail() {
   const { orderId } = useParams<{ orderId: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -137,7 +137,7 @@ export default function OrderUserDetail() {
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => navigate("/orders_user")}
+          onClick={() => navigate("/listData/history")}
           className="flex items-center text-2xl text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 mb-3"
         >
           <svg

@@ -1,4 +1,4 @@
-﻿/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/modules/order/OrderUserList.tsx
 
@@ -9,57 +9,7 @@ import type { Order } from "../const/order";
 import { onValue, ref } from "firebase/database";
 import { db } from "../const/firebase";
 
-type OrderStatus = "new" | "preparing" | "ready" | "shipping" | "delivered";
-
-const getStatusConfig = (status: OrderStatus) => {
-  const configs = {
-    new: {
-      label: "รอยืนยัน",
-      bgColor: "bg-yellow-50 dark:bg-yellow-500/10",
-      textColor: "text-yellow-700 dark:text-yellow-400",
-      dotColor: "bg-yellow-500",
-    },
-    edit: {
-       label: "รอตรวจสอบ",
-      bgColor: "bg-yellow-50 dark:bg-yellow-500/10",
-      textColor: "text-yellow-700 dark:text-yellow-400",
-      dotColor: "bg-yellow-500",
-    },
-    refuse: {
-      label: "ปฎิเสธ",
-      bgColor: "bg-red-100 dark:bg-red-500/20",
-      textColor: "text-red-700 dark:text-red-400",
-      dotColor: "bg-red-500",
-    },
-    preparing: {
-      label: "กำลังเตรียม",
-      bgColor: "bg-orange-50 dark:bg-orange-500/10",
-      textColor: "text-orange-700 dark:text-orange-400",
-      dotColor: "bg-orange-500",
-    },
-    ready: {
-      label: "พร้อมส่ง",
-      bgColor: "bg-purple-50 dark:bg-purple-500/10",
-      textColor: "text-purple-700 dark:text-purple-400",
-      dotColor: "bg-purple-500",
-    },
-    shipping: {
-      label: "กำลังมาส่ง",
-      bgColor: "bg-indigo-50 dark:bg-indigo-500/10",
-      textColor: "text-indigo-700 dark:text-indigo-400",
-      dotColor: "bg-indigo-500",
-    },
-    delivered: {
-      label: "ส่งสำเร็จ",
-      bgColor: "bg-emerald-50 dark:bg-emerald-500/10",
-      textColor: "text-emerald-700 dark:text-emerald-400",
-      dotColor: "bg-emerald-500",
-    },
-  };
-  return configs[status] || configs["new"];
-};
-
-export default function OrderUserList() {
+export default function HistoryData() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -137,7 +87,7 @@ export default function OrderUserList() {
   };
 
   const handleOrderClick = (orderId: string) => {
-    navigate(`/orders_user/${orderId}`);
+    navigate(`/listData/history/detail/${orderId}`);
   };
 
   if (loading) {
@@ -165,6 +115,28 @@ export default function OrderUserList() {
 
   return (
     <div className="h-full w-full flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 overflow-hidden">
+      {/* Header แบบกระทัดรัด */}
+      <div className="shrink-0 px-5 pt-5 pb-3 border-b border-gray-200 dark:border-gray-800 z-10 bg-white dark:bg-gray-900 shadow-sm">
+        <button
+          onClick={() => navigate("/listData")}
+          className="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 mb-3"
+        >
+          <svg
+            className="w-4 h-4 mr-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          ประวัติการสั่งซื้อ
+        </button>
+      </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {orders.length === 0 ? (
@@ -174,11 +146,6 @@ export default function OrderUserList() {
           </div>
         ) : (
           orders.map((order) => {
-            const statusConfig = getStatusConfig(
-              (order.status as OrderStatus) || "new",
-            );
-
-            // 🌟 ลอจิกดึงข้อมูล Rider
             const riderData =
               (order as any).rider_name || (order as any).rider_profile;
             const hasRider = !!order.rider_id || !!riderData;
@@ -220,28 +187,9 @@ export default function OrderUserList() {
                         </div>
                       </div>
                     </div>
-
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap flex items-center gap-1.5 ${statusConfig.bgColor} ${statusConfig.textColor}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor} animate-pulse`}
-                        ></span>
-                        {statusConfig.label}
-                      </span>
-
-                      {order.status === "refuse" && order.cancel_reason && (
-                        <span
-                          className="text-[10px] font-medium text-red-500 dark:text-red-400 truncate max-w-[120px]"
-                          title={order.cancel_reason}
-                        >
-                          {order.cancel_reason}
-                        </span>
-                      )}
-                    </div>
                   </div>
 
+                  {/* 🌟 2. ข้อมูลไรเดอร์แบบแถบเล็ก (ถ้ามี) */}
                   {order.rider_id && order.rider_id !== "" && (
                     <div className="flex items-center gap-2 mb-3 bg-blue-50/60 dark:bg-blue-900/20 px-3 py-2 rounded-xl border border-blue-100/50 dark:border-blue-800/30">
                       <img
@@ -284,6 +232,7 @@ export default function OrderUserList() {
                         </span>
                       </div>
 
+                      {/* สถานะอุปกรณ์ รับเตากระทะ */}
                       {order.equipment?.needEquipment && (
                         <span className="shrink-0 bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400 px-2 py-0.5 rounded-md font-semibold border border-orange-100 dark:border-orange-800/30">
                           รับเตากระทะ{" "}
@@ -296,7 +245,9 @@ export default function OrderUserList() {
                       )}
                     </div>
 
+                    {/* 🌟 แสดงช่องทางชำระเงินแทนยอดรวม */}
                     <div className="flex justify-between items-end mt-1">
+                      {/* <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">ช่องทางชำระเงิน</span> */}
                       <span className="text-[13px] font-bold text-gray-800 dark:text-gray-200">
                         {order.payment?.method === "cash"
                           ? "💵 เงินสดปลายทาง"
@@ -307,7 +258,7 @@ export default function OrderUserList() {
                               ? order.payment.method.toUpperCase()
                               : "ไม่ระบุ"}
                       </span>
-                      <span className="text-lg font-black text-green-500 dark:text-green-400 leading-none">
+                      <span className="text-lg font-black text-orange-500 dark:text-orange-400 leading-none">
                         ฿{order.totals?.grandTotal?.toLocaleString()}
                       </span>
                     </div>

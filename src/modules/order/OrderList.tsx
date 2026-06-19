@@ -161,6 +161,18 @@ const getStatusConfig = (status: OrderStatus) => {
       textColor: "text-blue-700 dark:text-blue-400",
       dotColor: "bg-blue-500",
     },
+    refuse: {
+      label: "ปฎิเสธ",
+      bgColor: "bg-red-100 dark:bg-red-500/20",
+      textColor: "text-red-700 dark:text-red-400",
+      dotColor: "bg-red-500",
+    },
+    edit: {
+       label: "รอตรวจสอบ",
+      bgColor: "bg-yellow-50 dark:bg-yellow-500/10",
+      textColor: "text-yellow-700 dark:text-yellow-400",
+      dotColor: "bg-yellow-500",
+    },
     preparing: {
       label: "กำลังเตรียม",
       bgColor: "bg-orange-100 dark:bg-orange-500/20",
@@ -527,7 +539,7 @@ export default function OrderList() {
                   >
                     {/* Header ของ Card */}
                     <div className="px-4 py-3 border-b border-gray-50 dark:border-gray-700/50 flex justify-between items-start gap-3">
-                      <div className="flex items-start gap-3 flex-1">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
                         {/* 🌟 ปุ่ม Checkbox จัดคิว (มีเฉพาะแท็บ Kitchen) ย่อขนาดลง */}
                         {activeTab === "kitchen" && (
                           <div
@@ -560,15 +572,28 @@ export default function OrderList() {
                         </div>
                       </div>
 
-                      {/* ป้าย Status */}
-                      <span
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap flex items-center gap-1.5 ${statusConfig.bgColor} ${statusConfig.textColor}`}
-                      >
+                      {/* 🌟 ด้านขวา: จัดกลุ่มป้าย Status และ เหตุผล ไว้ด้วยกัน (ชิดขวา) */}
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        {/* ป้าย Status */}
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor} animate-pulse`}
-                        ></span>
-                        {statusConfig.label}
-                      </span>
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap flex items-center gap-1.5 ${statusConfig.bgColor} ${statusConfig.textColor}`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor} animate-pulse`}
+                          ></span>
+                          {statusConfig.label}
+                        </span>
+
+                        {/* เหตุผลที่ปฏิเสธ (อยู่ใต้สถานะ และจะตรงกับระดับของเวลาฝั่งซ้ายพอดี) */}
+                        {order.status === "refuse" && order.cancel_reason && (
+                          <span
+                            className="text-[10px] font-medium text-red-500 dark:text-red-400 truncate max-w-[120px]"
+                            title={order.cancel_reason} // วางเมาส์เพื่อดูข้อความเต็มๆ ได้ถ้ามันยาวเกินไป
+                          >
+                            {order.cancel_reason}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* ข้อมูล Rider แสดงแบบแถบเล็กกระทัดรัด */}

@@ -7,6 +7,7 @@ import { homeRoutes } from "../modules/home/route";
 import { addressRoutes } from "../modules/address/route";
 import { paymentRoutes } from "../modules/payment/route";
 import { orderUserRoutes } from "../modules/order_user/route";
+import { listsDataRoutes } from "../modules/listData/route";
 
 export const AppRoutes = ({ user, setUser }: { user: any, setUser: any }) => {
   return (
@@ -28,6 +29,7 @@ export const AppRoutes = ({ user, setUser }: { user: any, setUser: any }) => {
       {paymentRoutes()}
       {addressRoutes()}
       {settingsDataRoutes()}
+      {listsDataRoutes()}
     </Routes>
   );
 }

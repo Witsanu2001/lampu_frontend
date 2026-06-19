@@ -10,9 +10,11 @@ export interface Order {
   payment: Payment;
   totals: Totals;
   slip_url: string;
+  old_slip_url: string;
   home_image_url: string;
   created_at: string;
   updated_at: string;
+  cancel_reason: string;
 }
 
 export interface Item {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 // ==========================================
 // 1. Component อนิเมชันตัวเลขวิ่ง (สมูทสไตล์ Minimal)
@@ -134,6 +135,7 @@ export default function Dashboard() {
   const [timeRange, setTimeRange] = useState<TimeRange>("1day");
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [category, setCategory] = useState<Category>("all");
+  const navigate = useNavigate();
 
   // 🌟 ดึงข้อมูลวันและเวลาปัจจุบันมาใช้โดยตรง (ไม่ใช้ state/effect เพื่อป้องกัน Render Loop)
   const now = new Date();
@@ -247,9 +249,25 @@ export default function Dashboard() {
         {/* Top Header & Global Filters */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-gray-100 dark:border-gray-800 pb-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
+            <button
+              onClick={() => navigate("/settingsData")}
+              className="flex items-center text-2xl text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 mb-3"
+            >
+              <svg
+                className="w-6 h-6 mt-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
               แดชบอร์ดข้อมูลออเดอร์ 📈
-            </h1>
+            </button>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">

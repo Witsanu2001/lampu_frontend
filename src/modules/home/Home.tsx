@@ -123,8 +123,7 @@ export default function Home() {
   }
 
   return (
-    <div className="h-full p-6 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-200">
-      {/* 🌟 ปรับระยะห่างระหว่างหัวข้อกับการ์ดให้โปร่งขึ้น */}
+    <div className="h-full p-6 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-200 max-lg:[&::-webkit-scrollbar]:hidden max-lg:[scrollbar-width:none]">
       <div className="space-y-8 z-10">
         <div>
           <div className="border-gray-200 dark:border-gray-700 mb-6">

@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function UserSetting() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("all");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
+  const navigate = useNavigate();
+  
   const users = [
     {
       id: 1,
@@ -100,16 +102,29 @@ export default function UserSetting() {
     <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-          จัดการผู้ใช้งาน
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          จัดการสิทธิ์และข้อมูลผู้ใช้งานในระบบ
-        </p>
+        <button
+          onClick={() => navigate("/settingsData")}
+          className="flex items-center text-2xl text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 mb-3"
+        >
+          <svg
+            className="w-6 h-6 mt-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          จัดการผู้ใช้งาน 👥
+        </button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <span className="text-3xl">👥</span>
@@ -152,7 +167,7 @@ export default function UserSetting() {
             {roleCounts.user}
           </p>
         </div>
-      </div>
+      </div> */}
 
       {/* Role Filter and Search */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -196,16 +211,7 @@ export default function UserSetting() {
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
             />
           </svg>
-        </div>
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          เพิ่มผู้ใช้
-        </button>
+        </div>  
       </div>
 
       {/* Users Table */}
@@ -270,7 +276,9 @@ export default function UserSetting() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                    <span className="mr-1">{getProviderIcon(user.provider)}</span>
+                    <span className="mr-1">
+                      {getProviderIcon(user.provider)}
+                    </span>
                     {user.provider}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
@@ -296,9 +304,7 @@ export default function UserSetting() {
         </div>
         {filteredUsers.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">
-              ไม่พบผู้ใช้งาน
-            </p>
+            <p className="text-gray-500 dark:text-gray-400">ไม่พบผู้ใช้งาน</p>
           </div>
         )}
       </div>

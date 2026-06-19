@@ -2,18 +2,8 @@ import { Link } from "react-router-dom";
 
 export default function Settingsdata() {
   return (
-    <div className="p-6 max-w-5xl mx-auto font-sans">
-      {/* Header Section */}
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">
-          จัดการระบบ (System Settings)
-        </h2>
-      </div>
-
-      {/* Grid Layout สำหรับการ์ด */}
+    <div className="h-full p-6 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-200 max-lg:[&::-webkit-scrollbar]:hidden max-lg:[scrollbar-width:none]">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        
-        {/* 1. Dashboard Card */}
         <Link
           to="/settingsData/dashboards"
           className="flex items-start bg-white rounded-2xl p-6 shadow-sm border border-gray-100 border-l-4 border-l-blue-500 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-gray-200"
