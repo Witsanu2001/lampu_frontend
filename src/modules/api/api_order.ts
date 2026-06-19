@@ -2,7 +2,6 @@
 import { getFreshToken } from "../../shared/infra/auth/token";
 import type { Order } from "../const/order";
 const apiUrl = import.meta.env.VITE_API_URL;
-const token = await getFreshToken();
 
 export async function addOrders(formData: FormData, token: string) {
   const response = await fetch(`${apiUrl}/api/orders/orders_add`, {
@@ -23,6 +22,7 @@ export async function addOrders(formData: FormData, token: string) {
 }
 
 export async function getAllOrders(): Promise<Order[]> {
+  const token = await getFreshToken();
   const response = await fetch(`${apiUrl}/api/orders/orders_get`, {
     method: "GET",
     headers: {
@@ -41,6 +41,7 @@ export async function getAllOrders(): Promise<Order[]> {
 }
 
 export async function getOrderById(orderId: string): Promise<Order> {
+  const token = await getFreshToken();
   const response = await fetch(`${apiUrl}/api/orders/orders_get/${orderId}`, {
     method: "GET",
     headers: {
@@ -59,6 +60,8 @@ export async function getOrderById(orderId: string): Promise<Order> {
 }
 
 export async function updateStatus(orderId: string, newStatus: string, riderId?: string): Promise<string> {
+  const token = await getFreshToken();
+
   let userId = "";
   if (riderId) {
     userId = riderId;
@@ -92,6 +95,7 @@ export async function updateStatus(orderId: string, newStatus: string, riderId?:
 }
 
 export const cancelOrder = async (orderId: string, reason: string, userId: string) => {
+  const token = await getFreshToken();
   const response = await fetch(`${apiUrl}/api/orders/orders_put/${orderId}/cancel`, {
     method: "PUT",
     headers: {
@@ -106,6 +110,7 @@ export const cancelOrder = async (orderId: string, reason: string, userId: strin
 };
 
 export async function getOrderUserById(): Promise<Order> {
+  const token = await getFreshToken();
   let userId = ""
   const userDataString = localStorage.getItem("userData");
   if (userDataString) {
@@ -148,6 +153,7 @@ export async function getAddOnMenus(token: string) {
 
 // ฟังก์ชันส่งออเดอร์แบบก้อนเดียว พร้อมลำดับคิว
 export async function assignBulkOrders(payload: any[]): Promise<string> {
+  const token = await getFreshToken();
   const response = await fetch(`${apiUrl}/api/orders/bulk_assign`, {
     method: "POST", // ส่งก้อนใหญ่ใช้ POST เหมาะสมกว่า
     headers: {
@@ -168,6 +174,7 @@ export async function assignBulkOrders(payload: any[]): Promise<string> {
 
 
 export async function getNewOrders(page: number = 1, limit: number = 10): Promise<Order[]> {
+  const token = await getFreshToken();
   if (!token) throw new Error("ไม่พบ Token ยืนยันตัวตน");
   const response = await fetch(`${apiUrl}/api/orders/orders_new?page=${page}&limit=${limit}`, {
     method: "GET",
@@ -183,6 +190,7 @@ export async function getNewOrders(page: number = 1, limit: number = 10): Promis
 }
 
 export async function getDeliveryOrders(page: number = 1, limit: number = 10): Promise<Order[]> {
+  const token = await getFreshToken();
   if (!token) throw new Error("ไม่พบ Token ยืนยันตัวตน");
 
   const response = await fetch(`${apiUrl}/api/orders/orders_delivery?page=${page}&limit=${limit}`, {
@@ -209,6 +217,7 @@ export interface OrderSummary {
 
 
 export async function getSuccessOrders(selectedDate: string): Promise<OrderSummary[]> {
+  const token = await getFreshToken();
   if (!token) throw new Error("ไม่พบ Token ยืนยันตัวตน");
 
   const response = await fetch(`${apiUrl}/api/orders/orders_get/success?date=${selectedDate}`, {
@@ -242,6 +251,7 @@ export interface StoveJob {
 }
 
 export async function getStoveOrders(): Promise<StoveJob[]> {
+  const token = await getFreshToken();
   if (!token) throw new Error("ไม่พบ Token ยืนยันตัวตน");
 
   const response = await fetch(`${apiUrl}/api/jobs/stove`, {

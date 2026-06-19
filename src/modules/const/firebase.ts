@@ -6,7 +6,7 @@ import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDtAh4kgX22ShZNv5wxcwprOW5Hz886TqU",
-  authDomain: "lampu-5a178.firebaseapp.com",
+  authDomain: "lampu-frontend.web.app",
   projectId: "lampu-5a178",
   storageBucket: "lampu-5a178.firebasestorage.app",
   messagingSenderId: "879165280409",

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { auth } from "../const/firebase";
 import {
   signInWithEmailAndPassword,
@@ -20,13 +20,37 @@ export default function Login({ setUser }: LoginProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoginView] = useState(true);
-  const [, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(""); // 🌟 ตัวนี้จะได้ใช้งานแล้วครับ
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkLiffState = async () => {
+      try {
+        // รอให้ liff.init() (ที่น่าจะถูกเรียกจาก App.tsx) ทำงานเสร็จก่อน
+        await liff.ready;
+
+        if (liff.isLoggedIn()) {
+          // ถ้าล็อกอินค้างไว้อยู่แล้ว หรือเปิดจากใน LINE App ให้ redirect ไปเลย ไม่ต้องให้ผู้ใช้กดปุ่มซ้ำ
+          window.location.href = "/";
+          return;
+        }
+      } catch (err) {
+        console.error("LIFF Ready Error:", err);
+        setError("ไม่สามารถเชื่อมต่อระบบ LINE ได้ กรุณารีเฟรชหน้าจอ");
+      } finally {
+        // LIFF ตื่นเต็มที่แล้ว (และไม่ได้ล็อกอินอยู่) ถึงจะยอมให้ปิดหน้าโหลด และโชว์ปุ่ม Login
+        setIsLoading(false); 
+      }
+    };
+
+    checkLiffState();
+  }, []);
 
   // --- Login ด้วย Email/Pass ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(""); // เคลียร์ error เก่าก่อนเริ่มทำงานใหม่
     try {
       const userCredential = isLoginView
         ? await signInWithEmailAndPassword(auth, email, password)
@@ -53,7 +77,7 @@ export default function Login({ setUser }: LoginProps) {
         actualRole = resData.data?.role || resData?.role || "user";
       }
 
-      // 🌟 3. ประกอบร่าง User ใหม่โดยใช้ Role จาก API จริๆ
+      // 🌟 3. ประกอบร่าง User ใหม่โดยใช้ Role จาก API จริงๆ
       const updatedUser = {
         ...payload,
         role: actualRole, 
@@ -70,6 +94,7 @@ export default function Login({ setUser }: LoginProps) {
 
   const handleFacebookLogin = async () => {
     setIsLoading(true);
+    setError(""); // เคลียร์ error เก่า
     const provider = new FacebookAuthProvider();
     provider.addScope("public_profile");
     provider.addScope("email");
@@ -134,15 +159,15 @@ export default function Login({ setUser }: LoginProps) {
   // --- Login ด้วย LINE (ปุ่มหลัก) ---
   const handleLineLogin = async () => {
     setIsLoading(true);
+    setError(""); // เคลียร์ error เก่า
     try {
       // ตรวจสอบว่า LIFF พร้อมหรือยัง
       if (!liff.isLoggedIn()) {
         // 🌟 แก้ไขจุดที่ 1: เปลี่ยนเป้าหมายกลับไปที่หน้าแรกสุด (Root URL) เสมอ
-        // ป้องกันไม่ให้ React Router เตะผู้ใช้กลับเพราะหาข้อมูลไม่ทัน
-        liff.login({ redirectUri: window.location.origin });
+        const cleanUrl = window.location.origin + window.location.pathname;
+        liff.login({ redirectUri: cleanUrl });
       } else {
         // 🌟 แก้ไขจุดที่ 2: ถ้า LIFF บอกว่าล็อกอินค้างไว้อยู่แล้ว 
-        // ให้ยิงกลับไปที่หน้าแรกสุดเพื่อโหลดข้อมูลใหม่เลย ไม่ต้อง reload หน้า login ซ้ำ
         window.location.href = "/";
       }
     } catch (err) {
@@ -158,6 +183,13 @@ export default function Login({ setUser }: LoginProps) {
         <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-6">
           เข้าสู่ระบบ
         </h2>
+
+        {/* 🌟 เพิ่มกล่องแสดง Error Message ตรงนี้ครับ จะแสดงก็ต่อเมื่อตัวแปร error มีข้อความอยู่ */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg text-sm text-center">
+            {error}
+          </div>
+        )}
 
         {isLoading ? (
           <LoadingScreen message="กำลังเชื่อมต่อ LINE..." />
@@ -198,6 +230,7 @@ export default function Login({ setUser }: LoginProps) {
               </button>
 
               <button
+                type="button" // 🌟 แนะนำให้ใส่ type="button" เพื่อไม่ให้มันเผลอ trigger form submit
                 onClick={handleFacebookLogin}
                 className="w-full py-3 bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold rounded-xl shadow-lg transition-all flex justify-center items-center gap-2"
               >
