@@ -7,7 +7,14 @@ export default function OrderHistory() {
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   // กำหนดวันที่เริ่มต้นเป็น 2026-06-16 ตามโจทย์
-  const [selectedDate, setSelectedDate] = useState("2026-06-16");
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0"); // +1 เพราะเดือนเริ่มจาก 0
+    const day = String(d.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  });
 
   // ฟังก์ชันยิง API
   useEffect(() => {

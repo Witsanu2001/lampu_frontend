@@ -65,6 +65,11 @@ export const menuConfig: MenuItem[] = [
         to: "/settingsData/orders",
         roles: ["admin"],
       },
+      {
+        label: "จัดการระบบร้าน",
+        to: "/settingsData/systems",
+        roles: ["admin"],
+      },
     ],
   },
 ];

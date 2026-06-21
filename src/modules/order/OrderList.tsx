@@ -228,12 +228,15 @@ export default function OrderList() {
       if (page > 1) setIsFetchingMore(true);
 
       try {
-        let data: Order[] = [];
+        let rawData: any;
         if (activeTab === "kitchen") {
-          data = await getNewOrders();
+          rawData = await getNewOrders();
         } else {
-          data = await getDeliveryOrders(page, limit);
+          rawData = await getDeliveryOrders(page, limit);
         }
+
+        // 🌟 ป้องกันกรณี API คืนค่า null หรือ undefined ให้แปลงเป็น Array ว่างเสมอ
+        const data: Order[] = Array.isArray(rawData) ? rawData : [];
 
         if (isMounted) {
           if (data.length < limit) {
@@ -249,13 +252,20 @@ export default function OrderList() {
             return [...prev, ...newOrders];
           });
 
+          setError(null); // เคลียร์ Error ทิ้ง (ถ้าก่อนหน้านี้เคยมี)
           setIsInitialLoading(false);
           setIsTabLoading(false);
           setIsFetchingMore(false);
         }
       } catch (err) {
         if (isMounted) {
-          setError("Failed to load orders");
+          console.error("Fetch orders error:", err);
+          // 🌟 แก้ไขตรงนี้: แทนที่จะโยน Error ให้เซ็ตเป็นหน้าว่างแทน
+          if (page === 1) {
+            setOrders([]); // เพื่อให้ไปเข้าเงื่อนไขแสดง "ไม่มีออเดอร์ในหมวดหมู่นี้"
+          }
+          setError(null); // ไม่ต้องเซ็ตคำว่า Failed to load orders
+          setHasMore(false);
           setIsInitialLoading(false);
           setIsTabLoading(false);
           setIsFetchingMore(false);

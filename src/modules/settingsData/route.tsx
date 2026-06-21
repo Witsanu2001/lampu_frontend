@@ -5,6 +5,7 @@ import MenuSetting from "./menu/MenuSetting";
 import OrderSetting from "./orders/OrderSetting";
 import { ProtectedRoute } from "../../shared/middlewares/ProtectedRoute";
 import Settingsdata from ".";
+import SystemPage from "./systems/SystemPage";
 
 export const settingsDataRoutes = () => (
   <>
@@ -50,6 +51,15 @@ export const settingsDataRoutes = () => (
       element={
         <ProtectedRoute>
           <OrderSetting />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      key="systems"
+      path="/settingsData/systems"
+      element={
+        <ProtectedRoute>
+          <SystemPage />
         </ProtectedRoute>
       }
     />

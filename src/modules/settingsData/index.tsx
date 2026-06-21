@@ -75,6 +75,23 @@ export default function Settingsdata() {
           </div>
         </Link>
 
+        <Link
+          to="/settingsData/systems"
+          className="flex items-start bg-white rounded-2xl p-6 shadow-sm border border-gray-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-gray-200"
+        >
+          <div className="text-4xl mr-5 bg-gray-50 w-16 h-16 flex items-center justify-center rounded-xl shrink-0">
+            ⚙️
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Systems
+            </h3>
+            <p className="text-gray-500 text-sm leading-relaxed">
+              ตั้งค่าระบบร้านค้า
+            </p>
+          </div>
+        </Link>
+
       </div>
     </div>
   );

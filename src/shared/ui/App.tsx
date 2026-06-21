@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/shared/ui/App.tsx
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { auth } from "../../modules/const/firebase";
 import {
   getRedirectResult,
@@ -12,6 +12,7 @@ import {
   signInWithCustomToken,
   onAuthStateChanged,
 } from "firebase/auth";
+import { getDatabase, ref as dbRef, onValue } from "firebase/database";
 import liff from "@line/liff";
 import "../../style/App.css";
 
@@ -23,6 +24,7 @@ import BottomNav from "./BottomNav";
 import { setToken } from "../infra/auth/token";
 
 const LIFF_ID = "2010209102-zHsx4M0r";
+const PROJECT_NAME = "thungyai";
 
 export default function App() {
   const [user, setUser] = useState<any>(() => {
@@ -30,15 +32,141 @@ export default function App() {
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
+  const navigate = useNavigate();
+
   const location = useLocation();
   const isPaymentPage =
-  location.pathname === "/orders/payment" ||
-  /^\/orders_user\/[^/]+$/.test(location.pathname) ||
-  /^\/orders\/[^/]+$/.test(location.pathname) ||
-  /^\/settingsData\/[^/]+$/.test(location.pathname) ||
-  /^\/listData\/history\/detail\/[^/]+$/.test(location.pathname)
+    location.pathname === "/orders/payment" ||
+    /^\/orders_user\/[^/]+$/.test(location.pathname) ||
+    /^\/orders\/[^/]+$/.test(location.pathname) ||
+    /^\/settingsData\/[^/]+$/.test(location.pathname) ||
+    /^\/listData\/history\/detail\/[^/]+$/.test(location.pathname);
 
   const [isAppLoading, setIsAppLoading] = useState(true);
+
+  // 🌟 State จัดการสถานะ
+  const [storeSettings, setStoreSettings] = useState<any>(null);
+  const [isStoreOpen, setIsStoreOpen] = useState<boolean>(true);
+  const [isBlocked, setIsBlocked] = useState<boolean>(false);
+  const [blockedUid, setBlockedUid] = useState<string>("");
+
+  // 🌟 1. ดักจับข้อมูลการตั้งค่าร้านจาก RTDB (ทำงานเมื่อค่าใน DB เปลี่ยน)
+  useEffect(() => {
+    const db = getDatabase(auth.app);
+    const settingsRef = dbRef(db, `live_settings/${PROJECT_NAME}`);
+    const unsubscribe = onValue(settingsRef, (snapshot) => {
+      setStoreSettings(snapshot.val());
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    // 🌟 1. ดึง UID จากคนที่ล็อกอินอยู่ หรือ จากคนที่เพิ่งโดนเตะออก
+    const uid = user?.uid || blockedUid;
+    if (!uid) return;
+
+    const db = getDatabase(auth.app);
+    const userRef = dbRef(db, `live_users/${uid}`);
+
+    const unsubscribe = onValue(userRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      // 🌟 2. อัปเดตสถานะการบล็อก
+      const isUserBlocked =
+        data.is_blocked === true || data.is_blocked === "true";
+
+      if (isUserBlocked) {
+        setIsBlocked(true);
+        setBlockedUid(uid); // จำ UID ไว้! (เพื่อให้ดักฟังต่อได้แม้ user จะกลายเป็น null)
+      } else {
+        setIsBlocked(false);
+        setBlockedUid(""); // เคลียร์ UID ทิ้ง! (Modal จะโดนพับเก็บทันที)
+      }
+
+      // 3. อัปเดต Role โดยใช้ Functional Update
+      setUser((prevUser: any) => {
+        if (prevUser && data.role && prevUser.role !== data.role) {
+          const updatedUser = { ...prevUser, role: data.role };
+          localStorage.setItem("userData", JSON.stringify(updatedUser));
+          return updatedUser;
+        }
+        return prevUser;
+      });
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid, blockedUid]); // 🌟 ต้องมี blockedUid ในวงเล็บนี้ด้วย
+
+  useEffect(() => {
+    const calculateStoreStatus = () => {
+      if (!storeSettings) return;
+      const data = storeSettings;
+
+      if (data.isManualOverride) {
+        setIsStoreOpen(data.storeStatus === "open");
+      } else {
+        const now = new Date();
+
+        // เช็ควันหยุดนักขัตฤกษ์
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        const isHoliday = data.specialHolidays?.some(
+          (h: any) => h.date === todayStr,
+        );
+        if (isHoliday) {
+          setIsStoreOpen(false);
+          return;
+        }
+
+        // เช็ควันหยุดประจำสัปดาห์
+        const daysMap = [
+          "sunday",
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
+        ];
+        const currentDay = daysMap[now.getDay()];
+        if (data.closedDays && data.closedDays[currentDay]) {
+          setIsStoreOpen(false);
+          return;
+        }
+
+        // เช็คเวลาเปิด-ปิด
+        const currentTimeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+        const openT = data.openTime || "00:00";
+        const closeT = data.closeTime || "23:59";
+
+        if (currentTimeStr >= openT && currentTimeStr <= closeT) {
+          setIsStoreOpen(true);
+        } else {
+          setIsStoreOpen(false);
+        }
+      }
+    };
+
+    calculateStoreStatus(); // คำนวณครั้งแรก
+    const interval = setInterval(calculateStoreStatus, 60000); // รีรันทุก 1 นาที (60,000 ms)
+
+    return () => clearInterval(interval);
+  }, [storeSettings]);
+
+  useEffect(() => {
+    // ใช้เงื่อนไขให้กระชับ
+    if (isBlocked && location.pathname !== "/login") {
+      // ใช้ setTimeout เพื่อให้ React ทำงานในรอบถัดไป (หลีกเลี่ยง error cascading render)
+      const timer = setTimeout(() => {
+        localStorage.removeItem("userData");
+        setUser(null);
+        navigate("/login");
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isBlocked, location.pathname, navigate]);
+
   useEffect(() => {
     const initializeSystem = async () => {
       try {
@@ -96,12 +224,10 @@ export default function App() {
         auth,
         data.firebase_token,
       );
-
       const profile = await liff.getProfile();
       if (!profile) throw new Error("ดึง Profile จาก LINE ไม่สำเร็จ");
 
       const decodedToken = liff.getDecodedIDToken() as any;
-
       let lineUser: any = {
         uid: profile.userId,
         email: decodedToken?.email || "",
@@ -124,10 +250,8 @@ export default function App() {
       localStorage.setItem("userData", JSON.stringify(lineUser));
       setIsAppLoading(false);
     } catch (err: any) {
-      // 🌟 เด้ง Alert ขึ้นหน้าจอมือถือให้เห็นชัดๆ ว่าพังเพราะอะไร!
       alert(`🚨 ระบบขัดข้อง:\n${err.message}`);
       console.error("LINE Auth Error:", err);
-
       if (!liff.isInClient()) liff.logout();
       localStorage.removeItem("userData");
       setUser(null);
@@ -135,7 +259,6 @@ export default function App() {
     }
   };
 
-  // 5. จัดการผลลัพธ์จากการล็อกอิน Facebook
   useEffect(() => {
     const handleRedirectResult = async () => {
       try {
@@ -185,12 +308,12 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen w-full flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
+    <div className="h-screen w-full flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden relative">
       {user && !isPaymentPage && <Header user={user} setUser={setUser} />}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {user && !isPaymentPage && (
-          <aside className="hidden xl:flex flex-col w-64 bg-white dark:bg-gray-800 border-r border-gray-200 p-6 overflow-hidden">
+          <aside className="hidden xl:flex flex-col w-64 bg-white dark:bg-gray-800 border-r border-gray-200 p-6 overflow-hidden z-10">
             <div className="flex flex-col gap-6">
               {menuConfig.filter(hasPermission).map((item, index) => (
                 <div key={index} className="flex flex-col gap-2">
@@ -227,6 +350,70 @@ export default function App() {
           hasPermission={hasPermission}
         />
       </div>
+
+      {/* 🌟 Modal 1: แจ้งเตือนเมื่อบัญชีโดนบล็อก (ความสำคัญสูงสุด) */}
+      {isBlocked && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center">
+            <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mx-auto mb-5">
+              <svg
+                className="w-10 h-10"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-extrabold text-red-600 dark:text-red-400 mb-2">
+              บัญชีถูกระงับการใช้งาน
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-4">
+              ขออภัยค่ะ บัญชีของคุณถูกระงับการใช้งานชั่วคราว
+              ไม่สามารถทำรายการได้ในขณะนี้
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              หากมีข้อสงสัย กรุณาติดต่อผู้ดูแลระบบ
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!isBlocked && !isStoreOpen && (!user || user.role === "user") && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center transform transition-all">
+            <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
+              <svg
+                className="w-10 h-10"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-extrabold text-gray-800 dark:text-white mb-2">
+              ร้านปิดให้บริการ
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-2">
+              ขออภัยค่ะ ขณะนี้อยู่นอกเวลาทำการ
+            </p>
+            <p className="text-emerald-600 dark:text-emerald-400 font-medium text-sm">
+              กรุณากลับมาใหม่ภายหลังนะคะ 🙏
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
