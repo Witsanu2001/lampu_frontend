@@ -1,24 +1,24 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
-import { signOut } from "firebase/auth";
 import { auth } from "../../modules/const/firebase";
 import liff from "@line/liff";
 import { useCart } from "../context/CartContext";
 import CartModal from "../components/CartModal";
-import { useNavigate } from "react-router-dom";
 
 interface HeaderProps {
   user: any;
   setUser: (user: any) => void;
 }
 
+// 🌟 สร้างตัวแปรเช็คว่ารันบน localhost (ทดสอบ) หรือไม่
+const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+
 export default function Header({ user, setUser }: HeaderProps) {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const { cartCount } = useCart();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isBouncing, setIsBouncing] = useState(false);
-  const navigate = useNavigate();
 
   const LOGO_URL =
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSFvdyWq2xH0rP3uHBFHY6WP5tKMUx74VJ8g&s";
@@ -54,14 +54,31 @@ export default function Header({ user, setUser }: HeaderProps) {
     setIsDarkMode(!isDarkMode);
   };
 
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
   const handleLogout = async () => {
-    if (user?.provider === "line") {
-      liff.logout();
+    try {
+      await auth.signOut();
+      
+      try {
+        if (typeof liff !== "undefined" && liff.id && liff.isLoggedIn()) {
+          liff.logout();
+        }
+      } catch (err) {
+        console.warn("LIFF logout skipped or failed:", err);
+      }
+
+      localStorage.clear();
+      
+      // ปักธงว่าเป็นการบังคับออกจากระบบ
+      localStorage.setItem("forceLogout", "true");
+
+      setUser(null);
+      setShowLogoutModal(false);
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Logout Error:", error);
     }
-    await signOut(auth);
-    setUser(null);
-    localStorage.removeItem("userData");
-    navigate("/login");
   };
 
   return (
@@ -79,7 +96,6 @@ export default function Header({ user, setUser }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
-          {/* 🌟 1. เติม id="cart-icon" ที่ปุ่มนี้ */}
           <button
             id="cart-icon"
             onClick={() => setIsCartOpen(true)}
@@ -115,34 +131,12 @@ export default function Header({ user, setUser }: HeaderProps) {
             className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors duration-200 focus:outline-none"
           >
             {isDarkMode ? (
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                />
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
             ) : (
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-                />
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
               </svg>
             )}
           </button>
@@ -152,15 +146,12 @@ export default function Header({ user, setUser }: HeaderProps) {
           <div className="flex items-center gap-2">
             {user?.photoURL && (
               <img
-                src={user.photoURL || "/default-avatar.png"} // ใช้รูป default ถ้า photoURL ไม่มี
+                src={user.photoURL || "/default-avatar.png"}
                 alt="Profile"
                 className="w-10 h-10 rounded-full object-cover border border-gray-200"
                 onError={(e: any) => {
-                  // ถ้าโหลดรูปไม่ขึ้น ให้สลับไปใช้รูป Placeholder หรือตัวอักษรย่อ
                   e.target.onerror = null;
-                  e.target.src =
-                    "https://ui-avatars.com/api/?name=" +
-                    (user.displayName || "U");
+                  e.target.src = "https://ui-avatars.com/api/?name=" + (user.displayName || "U");
                 }}
               />
             )}
@@ -169,27 +160,60 @@ export default function Header({ user, setUser }: HeaderProps) {
             </span>
           </div>
 
-          <button
-            onClick={handleLogout}
-            className="flex items-center justify-center p-2 md:px-3 md:py-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 border border-gray-200 dark:border-gray-600 rounded-md transition-all"
-          >
-            <span className="hidden md:block text-[13px] font-bold">
-              ออกจากระบบ
-            </span>
-            <svg
-              className="w-6 h-6 md:hidden"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          {/* 🌟 ซ่อนปุ่มออกจากระบบถ้าเป็น Production (แสดงเฉพาะ Localhost) */}
+          {isLocalhost && (
+            <button
+              onClick={() => setShowLogoutModal(true)}
+              className="flex items-center justify-center p-2 md:px-3 md:py-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 border border-gray-200 dark:border-gray-600 rounded-md transition-all"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-          </button>
+              <span className="hidden md:block text-[13px] font-bold">
+                ออกจากระบบ
+              </span>
+              <svg
+                className="w-6 h-6 md:hidden"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          )}
+
+          {/* 🌟 ซ่อน Modal ออกจากระบบใน Production เช่นเดียวกัน */}
+          {showLogoutModal && isLocalhost && (
+            <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-2xl max-w-sm w-full text-center border border-gray-100 dark:border-gray-700 transform transition-all animate-in zoom-in-95 duration-150">
+                <div className="w-16 h-16 bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </div>
+
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  ออกจากระบบ?
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">
+                  คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ? ข้อมูลและแคชทั้งหมดในแอปพลิเคชันนี้จะถูกล้างออกทันที
+                </p>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowLogoutModal(false)}
+                    className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold rounded-xl transition-all active:scale-95 text-sm"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-all active:scale-95 shadow-md shadow-red-500/20 text-sm"
+                  >
+                    ออกจากระบบ
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </header>
       <CartModal isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />

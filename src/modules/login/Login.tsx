@@ -14,6 +14,9 @@ import { setToken } from "../../shared/infra/auth/token";
 import LoadingScreen from "./components/LoadingScreen";
 import { getDatabase, onValue, ref } from "firebase/database";
 
+// 🌟 1. สร้างตัวแปรตรวจสอบว่ารันบนเครื่องตัวเอง (Localhost) หรือไม่
+const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+
 interface LoginProps {
   setUser: (user: any) => void;
 }
@@ -57,9 +60,7 @@ export default function Login({ setUser }: LoginProps) {
   }, []);
 
   useEffect(() => {
-    // 🌟 ใช้ uid จากคนที่โดนบล็อก (ถ้ามี) หรือใช้จากคนที่ล็อกอินอยู่
     const targetUid = blockedUid || currentUser?.uid;
-
     if (!targetUid) return;
 
     const db = getDatabase(auth.app);
@@ -67,14 +68,11 @@ export default function Login({ setUser }: LoginProps) {
 
     const unsubscribe = onValue(userRef, (snapshot) => {
       const data = snapshot.val();
-      console.log("📥 [Login RTDB] ข้อมูลล่าสุด:", data);
 
-      // รองรับทั้งแบบ boolean และ string เพื่อความชัวร์
       if (data && (data.is_blocked === false || data.is_blocked === "false")) {
         setIsBlocked(false);
         setBlockMessage("");
-        setBlockedUid(""); // เคลียร์ค่าทิ้งเมื่อปลดบล็อกสำเร็จ
-        console.log("🔓 ปลดบล็อกสำเร็จ! ปิด Modal");
+        setBlockedUid("");
       }
     });
 
@@ -96,11 +94,9 @@ export default function Login({ setUser }: LoginProps) {
         setIsLoading(false);
       }
     };
-
     checkLiffState();
   }, []);
 
-  // --- Login ด้วย Email/Pass ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -127,7 +123,7 @@ export default function Login({ setUser }: LoginProps) {
         if (syncRes.status === 403 || errData.message?.includes("ระงับ")) {
           setBlockMessage(errData.message || "บัญชีของคุณถูกระงับการใช้งาน");
           setIsBlocked(true);
-          setBlockedUid(user.uid); // 🌟 เพิ่มบรรทัดนี้!
+          setBlockedUid(user.uid);
           setIsLoading(false);
           return;
         }
@@ -136,6 +132,7 @@ export default function Login({ setUser }: LoginProps) {
 
       await syncUserToRTDB(user.uid);
 
+      // 🌟 2. ดึง Role จาก API ตอนล็อกอินเข้าครั้งแรก
       const resData = await syncRes.json();
       const actualRole = resData.data?.role || resData?.role || "user";
 
@@ -147,7 +144,6 @@ export default function Login({ setUser }: LoginProps) {
       setUser(updatedUser);
       localStorage.setItem("userData", JSON.stringify(updatedUser));
     } catch (err: any) {
-      // 🌟 ดักจับกรณีโดนบล็อคจากฝั่ง Firebase Auth โดยตรง
       if (err.code === "auth/user-disabled") {
         setBlockMessage("บัญชีของคุณถูกระงับการใช้งานโดยผู้ดูแลระบบ");
         setIsBlocked(true);
@@ -168,6 +164,9 @@ export default function Login({ setUser }: LoginProps) {
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+
+      const idToken = await user.getIdToken(true);
+      setToken(idToken, 24);
 
       const credential = FacebookAuthProvider.credentialFromResult(result);
       const token = credential?.accessToken;
@@ -203,7 +202,7 @@ export default function Login({ setUser }: LoginProps) {
         if (syncRes.status === 403 || errData.message?.includes("ระงับ")) {
           setBlockMessage(errData.message || "บัญชีของคุณถูกระงับการใช้งาน");
           setIsBlocked(true);
-          setBlockedUid(user.uid); // 🌟 เพิ่มบรรทัดนี้!
+          setBlockedUid(user.uid);
           setIsLoading(false);
           return;
         }
@@ -212,6 +211,7 @@ export default function Login({ setUser }: LoginProps) {
 
       await syncUserToRTDB(user.uid);
 
+      // 🌟 ดึง Role จาก API สำหรับ Facebook
       const resData = await syncRes.json();
       const actualRole = resData.data?.role || resData?.role || "user";
 
@@ -252,24 +252,13 @@ export default function Login({ setUser }: LoginProps) {
     }
   };
 
-  // 🌟 ถ้าโดนบล็อค จะแสดงแค่หน้าจอนี้เท่านั้น (ไม่มีปุ่มปิด ไม่มีปุ่มยกเลิก)
   if (isBlocked) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100 dark:bg-gray-900">
         <div className="max-w-md w-full bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-2xl text-center border border-red-100 dark:border-red-900/30">
           <div className="w-24 h-24 bg-red-100 dark:bg-red-500/20 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-            <svg
-              className="w-12 h-12"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
+            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-3">
@@ -300,6 +289,7 @@ export default function Login({ setUser }: LoginProps) {
           <LoadingScreen message="กำลังเชื่อมต่อระบบ..." />
         ) : (
           <div className="flex flex-col gap-4">
+            {/* 🌟 ปุ่ม LINE ให้โชว์เสมอเป็นหลัก */}
             <button
               onClick={handleLineLogin}
               className="w-full py-4 bg-[#06C755] hover:bg-[#05b34d] text-white font-bold rounded-xl shadow-lg transition-all flex justify-center items-center gap-2 text-lg"
@@ -307,39 +297,44 @@ export default function Login({ setUser }: LoginProps) {
               เข้าสู่ระบบด้วย LINE
             </button>
 
-            <div className="flex items-center my-4">
-              <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
-              <span className="mx-4 text-gray-400 text-sm">หรือ</span>
-              <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
-            </div>
+            {/* 🌟 3. ซ่อนฟอร์ม Email และ Facebook ถ้าเป็นระบบจริง (โชว์เฉพาะตอนเทสบน Localhost) */}
+            {isLocalhost && (
+              <>
+                <div className="flex items-center my-4">
+                  <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
+                  <span className="mx-4 text-gray-400 text-sm">ส่วนสำหรับทดสอบระบบ (Localhost)</span>
+                  <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
+                </div>
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-              <input
-                type="email"
-                placeholder="อีเมล"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <input
-                type="password"
-                placeholder="รหัสผ่าน"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <button className="w-full py-3 bg-gray-800 dark:bg-gray-600 hover:bg-gray-900 dark:hover:bg-gray-500 text-white font-bold rounded-xl transition-all shadow-md">
-                เข้าสู่ระบบด้วยอีเมล
-              </button>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                  <input
+                    type="email"
+                    placeholder="อีเมล"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <input
+                    type="password"
+                    placeholder="รหัสผ่าน"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button className="w-full py-3 bg-gray-800 dark:bg-gray-600 hover:bg-gray-900 dark:hover:bg-gray-500 text-white font-bold rounded-xl transition-all shadow-md">
+                    เข้าสู่ระบบด้วยอีเมล
+                  </button>
 
-              <button
-                type="button"
-                onClick={handleFacebookLogin}
-                className="w-full py-3 bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold rounded-xl shadow-lg transition-all flex justify-center items-center gap-2 mt-2"
-              >
-                เข้าสู่ระบบด้วย Facebook
-              </button>
-            </form>
+                  <button
+                    type="button"
+                    onClick={handleFacebookLogin}
+                    className="w-full py-3 bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold rounded-xl shadow-lg transition-all flex justify-center items-center gap-2 mt-2"
+                  >
+                    เข้าสู่ระบบด้วย Facebook
+                  </button>
+                </form>
+              </>
+            )}
           </div>
         )}
       </div>

@@ -120,17 +120,14 @@ export default function OrderStove() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       {job.status === "pending" ? (
-                        /* 🕒 สถานะ pending: แสดงกรอบสีเทา "รอเก็บเตา" (เป็นกรอบธรรมดา กดไม่ได้) */
-                        <span className="px-4 py-2 inline-flex text-xs font-semibold rounded-lg border border-gray-300 bg-gray-50 text-gray-500 dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-400">
-                          รอเก็บเตา
+                        <span className="px-4 py-2 inline-flex text-xs font-semibold rounded-lg border border-red-300 bg-red-50 text-red-500 dark:border-red-600 dark:bg-red-700/50 dark:text-red-400">
+                          รอเก็บ
                         </span>
                       ) : job.status === "success" ? (
-                        /* 🟢 สถานะ success: แสดงกรอบ/ป้ายสีเขียว "เก็บแล้ว" */
                         <span className="px-4 py-2 inline-flex text-xs font-semibold rounded-lg bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">
                           เก็บแล้ว
                         </span>
                       ) : (
-                        /* 🟡 สถานะอื่นๆ (ถ้ามี): แสดงเป็นป้ายมนสีส้ม */
                         <span className="px-3 py-1 inline-flex text-xs font-medium rounded-full bg-amber-100 text-amber-700">
                           {job.status}
                         </span>
