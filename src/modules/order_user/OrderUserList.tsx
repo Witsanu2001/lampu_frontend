@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getOrderUserById } from "../api/api_order";
+import { getOrderUserByToday } from "../api/api_order";
 import type { Order } from "../const/order";
 import { onValue, ref } from "firebase/database";
 import { db } from "../const/firebase";
@@ -49,7 +49,13 @@ const getStatusConfig = (status: OrderStatus) => {
       textColor: "text-indigo-700 dark:text-indigo-400",
       dotColor: "bg-indigo-500",
     },
-    delivered: {
+    // delivered: {
+    //   label: "ส่งสำเร็จ",
+    //   bgColor: "bg-emerald-50 dark:bg-emerald-500/10",
+    //   textColor: "text-emerald-700 dark:text-emerald-400",
+    //   dotColor: "bg-emerald-500",
+    // },
+    success: {
       label: "ส่งสำเร็จ",
       bgColor: "bg-emerald-50 dark:bg-emerald-500/10",
       textColor: "text-emerald-700 dark:text-emerald-400",
@@ -93,7 +99,7 @@ export default function OrderUserList() {
           return;
         }
 
-        const data = await getOrderUserById();
+        const data = await getOrderUserByToday();
         if (isMounted) {
           setOrders(Array.isArray(data) ? data : []);
         }

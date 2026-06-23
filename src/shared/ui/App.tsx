@@ -163,44 +163,6 @@ export default function App() {
     }
   }, [isBlocked, location.pathname, navigate]);
 
-  // useEffect(() => {
-  //   const initializeSystem = async () => {
-  //     try {
-  //       const fbUser = await new Promise<any>((resolve) => {
-  //         const unsubscribe = onAuthStateChanged(auth, (u) => {
-  //           unsubscribe();
-  //           resolve(u);
-  //         });
-  //       });
-
-  //       await liff.init({ liffId: LIFF_ID });
-  //       if (fbUser) {
-  //         const token = await fbUser.getIdToken(true);
-  //         setToken(token, 24);
-
-  //         const savedUserStr = localStorage.getItem("userData");
-  //         if (savedUserStr) {
-  //           setUser(JSON.parse(savedUserStr));
-  //         }
-  //         await new Promise((resolve) => setTimeout(resolve, 100));
-  //         setIsAppLoading(false);
-  //         return;
-  //       }
-
-  //       if (liff.isLoggedIn()) {
-  //         await handleLineUserData();
-  //       } else {
-  //         setIsAppLoading(false);
-  //       }
-  //     } catch (err) {
-  //       console.error("System Init Error:", err);
-  //       setIsAppLoading(false);
-  //     }
-  //   };
-
-  //   initializeSystem();
-  // }, []);
-
   useEffect(() => {
     const initializeSystem = async () => {
       try {
@@ -214,26 +176,17 @@ export default function App() {
             resolve(u);
           });
         });
-
-        // 🌟 3. ถ้าในเครื่องมีข้อมูล และ Firebase จำได้ -> ให้เข้าแอปเลย โดยไม่ต้องไป Init LIFF
-        // (ลดเวลาได้ 1-3 วินาทีเต็มๆ)
         if (fbUser && savedUserStr) {
           setUser(JSON.parse(savedUserStr));
-          setIsAppLoading(false); // ปิด Loading Screen ให้แสดงหน้าหลักทันที
-
-          // แอบไปรีเฟรช Token เบื้องหลังเงียบๆ
+          setIsAppLoading(false);
           fbUser.getIdToken(true).then((token: string) => setToken(token, 24));
-          return; // 🛑 จบการทำงานฟังก์ชัน ไม่ต้องลงไปทำ LIFF Init
+          return;
         }
-
-        // 🌟 4. แต่ถ้าผู้ใช้เพิ่งเข้ามาครั้งแรก หรือไม่มีข้อมูลล็อกอิน ค่อยสั่ง Init LIFF
         await liff.init({ liffId: LIFF_ID });
 
         if (liff.isLoggedIn()) {
-          // ถ้า LIFF จำได้ว่าล็อกอินไลน์ไว้แล้ว ให้ไปดึงข้อมูลมาล็อคอินใหม่
           await handleLineUserData();
         } else {
-          // ถ้าไม่เคยล็อคอินอะไรเลย ปล่อยไปหน้า Login ตามปกติ
           setIsAppLoading(false);
         }
       } catch (err) {

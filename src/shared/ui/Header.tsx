@@ -5,6 +5,7 @@ import { auth } from "../../modules/const/firebase";
 import liff from "@line/liff";
 import { useCart } from "../context/CartContext";
 import CartModal from "../components/CartModal";
+import defaultAvatar from "../../assets/profile.png";
 
 interface HeaderProps {
   user: any;
@@ -12,7 +13,9 @@ interface HeaderProps {
 }
 
 // 🌟 สร้างตัวแปรเช็คว่ารันบน localhost (ทดสอบ) หรือไม่
-const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const isLocalhost =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1";
 
 export default function Header({ user, setUser }: HeaderProps) {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -59,7 +62,7 @@ export default function Header({ user, setUser }: HeaderProps) {
   const handleLogout = async () => {
     try {
       await auth.signOut();
-      
+
       try {
         if (typeof liff !== "undefined" && liff.id && liff.isLoggedIn()) {
           liff.logout();
@@ -69,7 +72,7 @@ export default function Header({ user, setUser }: HeaderProps) {
       }
 
       localStorage.clear();
-      
+
       // ปักธงว่าเป็นการบังคับออกจากระบบ
       localStorage.setItem("forceLogout", "true");
 
@@ -131,12 +134,34 @@ export default function Header({ user, setUser }: HeaderProps) {
             className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors duration-200 focus:outline-none"
           >
             {isDarkMode ? (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                />
               </svg>
             ) : (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                />
               </svg>
             )}
           </button>
@@ -144,17 +169,17 @@ export default function Header({ user, setUser }: HeaderProps) {
           <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 hidden sm:block"></div>
 
           <div className="flex items-center gap-2">
-            {user?.photoURL && (
-              <img
-                src={user.photoURL || "/default-avatar.png"}
-                alt="Profile"
-                className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                onError={(e: any) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://ui-avatars.com/api/?name=" + (user.displayName || "U");
-                }}
-              />
-            )}
+            {/* 🌟 2. เอาเงื่อนไขที่ครอบอยู่ออก ให้ render <img> เสมอ */}
+            <img
+              src={user?.photoURL || defaultAvatar}
+              alt="Profile"
+              className="w-10 h-10 rounded-full object-cover border"
+              onError={(e: any) => {
+                e.target.onerror = null; // ป้องกันการพยายามโหลดซ้ำไม่สิ้นสุด
+                e.target.src = defaultAvatar; // 🌟 3. ถ้า URL ของรูปเสีย (โหลดไม่ขึ้น) ให้เปลี่ยนเป็นรูปที่ import มา
+              }}
+            />
+
             <span className="text-sm font-medium text-gray-800 dark:text-gray-100 hidden sm:block">
               {user?.displayName || "ผู้ใช้งาน"}
             </span>
@@ -175,7 +200,12 @@ export default function Header({ user, setUser }: HeaderProps) {
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
               </svg>
             </button>
           )}
@@ -185,8 +215,18 @@ export default function Header({ user, setUser }: HeaderProps) {
             <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
               <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-2xl max-w-sm w-full text-center border border-gray-100 dark:border-gray-700 transform transition-all animate-in zoom-in-95 duration-150">
                 <div className="w-16 h-16 bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  <svg
+                    className="w-8 h-8"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2.5"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
                   </svg>
                 </div>
 
@@ -194,7 +234,8 @@ export default function Header({ user, setUser }: HeaderProps) {
                   ออกจากระบบ?
                 </h3>
                 <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">
-                  คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ? ข้อมูลและแคชทั้งหมดในแอปพลิเคชันนี้จะถูกล้างออกทันที
+                  คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?
+                  ข้อมูลและแคชทั้งหมดในแอปพลิเคชันนี้จะถูกล้างออกทันที
                 </p>
 
                 <div className="flex gap-3">

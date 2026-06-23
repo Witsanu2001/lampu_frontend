@@ -4,12 +4,10 @@ import { auth } from "../const/firebase";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  FacebookAuthProvider,
-  signInWithPopup,
   onAuthStateChanged,
 } from "firebase/auth";
 import liff from "@line/liff";
-import { postUsersSync } from "../api/api_login";
+import { postSyncUserToRTDB, postUsersSync } from "../api/api_login";
 import { setToken } from "../../shared/infra/auth/token";
 import LoadingScreen from "./components/LoadingScreen";
 import { getDatabase, onValue, ref } from "firebase/database";
@@ -24,7 +22,7 @@ interface LoginProps {
 export default function Login({ setUser }: LoginProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoginView] = useState(true);
+  const [isLoginView, setIsLoginView] = useState(true); // 🌟 แก้ไข: เปิดให้สามารถสลับระหว่างหน้า Login และ Register ได้
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isBlocked, setIsBlocked] = useState(false);
@@ -32,25 +30,6 @@ export default function Login({ setUser }: LoginProps) {
   const [blockedUid, setBlockedUid] = useState("");
 
   const [currentUser, setCurrentUser] = useState(auth.currentUser);
-
-  const syncUserToRTDB = async (uid: string) => {
-    try {
-      const token = await auth.currentUser?.getIdToken();
-      await fetch(
-        `http://localhost:8080/api/users/sync_to_live?user_id=${uid}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      console.log("✅ Sync to RTDB success for:", uid);
-    } catch (err) {
-      console.error("❌ Sync to RTDB failed:", err);
-    }
-  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -130,7 +109,7 @@ export default function Login({ setUser }: LoginProps) {
         throw new Error(errData.message || "เซิร์ฟเวอร์เกิดข้อผิดพลาด");
       }
 
-      await syncUserToRTDB(user.uid);
+      await postSyncUserToRTDB(user.uid);
 
       // 🌟 2. ดึง Role จาก API ตอนล็อกอินเข้าครั้งแรก
       const resData = await syncRes.json();
@@ -149,86 +128,6 @@ export default function Login({ setUser }: LoginProps) {
         setIsBlocked(true);
       } else {
         setError(err.message);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleFacebookLogin = async () => {
-    setIsLoading(true);
-    setError("");
-    const provider = new FacebookAuthProvider();
-    provider.addScope("public_profile");
-    provider.addScope("email");
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      const idToken = await user.getIdToken(true);
-      setToken(idToken, 24);
-
-      const credential = FacebookAuthProvider.credentialFromResult(result);
-      const token = credential?.accessToken;
-
-      let fbName = user.displayName || "";
-      let fbPic = user.photoURL || "";
-
-      if (token) {
-        try {
-          const response = await fetch(
-            `https://graph.facebook.com/me?fields=id,name,email,picture.width(500).height(500)&access_token=${token}`,
-          );
-          const data = await response.json();
-          if (data?.name) fbName = data.name;
-          if (data?.picture?.data?.url) fbPic = data.picture.data.url;
-        } catch (fetchErr) {
-          console.error("Error fetching Facebook Graph API:", fetchErr);
-        }
-      }
-
-      const payload = {
-        uid: user.uid,
-        email: user.email,
-        displayName: fbName,
-        photoURL: fbPic,
-        provider: "facebook",
-      };
-
-      const syncRes = await postUsersSync(payload);
-
-      if (!syncRes.ok) {
-        const errData = await syncRes.json().catch(() => ({}));
-        if (syncRes.status === 403 || errData.message?.includes("ระงับ")) {
-          setBlockMessage(errData.message || "บัญชีของคุณถูกระงับการใช้งาน");
-          setIsBlocked(true);
-          setBlockedUid(user.uid);
-          setIsLoading(false);
-          return;
-        }
-        throw new Error(errData.message || "เซิร์ฟเวอร์เกิดข้อผิดพลาด");
-      }
-
-      await syncUserToRTDB(user.uid);
-
-      // 🌟 ดึง Role จาก API สำหรับ Facebook
-      const resData = await syncRes.json();
-      const actualRole = resData.data?.role || resData?.role || "user";
-
-      const updatedUser = {
-        ...payload,
-        role: actualRole,
-      };
-
-      setUser(updatedUser);
-      localStorage.setItem("userData", JSON.stringify(updatedUser));
-    } catch (err: any) {
-      if (err.code === "auth/user-disabled") {
-        setBlockMessage("บัญชีของคุณถูกระงับการใช้งานโดยผู้ดูแลระบบ");
-        setIsBlocked(true);
-      } else {
-        console.error("Facebook Login Error:", err);
-        setError("ไม่สามารถเข้าสู่ระบบผ่าน Facebook ได้");
       }
     } finally {
       setIsLoading(false);
@@ -275,8 +174,9 @@ export default function Login({ setUser }: LoginProps) {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
       <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
+        {/* 🌟 ปรับเปลี่ยนหัวข้อตามสถานะ Login หรือ Register */}
         <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-6">
-          เข้าสู่ระบบ
+          {isLoginView ? "เข้าสู่ระบบ" : "สมัครสมาชิก"}
         </h2>
 
         {error && (
@@ -297,7 +197,7 @@ export default function Login({ setUser }: LoginProps) {
               เข้าสู่ระบบด้วย LINE
             </button>
 
-            {/* 🌟 3. ซ่อนฟอร์ม Email และ Facebook ถ้าเป็นระบบจริง (โชว์เฉพาะตอนเทสบน Localhost) */}
+            {/* 🌟 3. ซ่อนฟอร์ม Email ถ้าเป็นระบบจริง (โชว์เฉพาะตอนเทสบน Localhost) */}
             {isLocalhost && (
               <>
                 <div className="flex items-center my-4">
@@ -321,17 +221,21 @@ export default function Login({ setUser }: LoginProps) {
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
                   />
+                  {/* 🌟 ปรับเปลี่ยนชื่อปุ่มตามโหมดปัจจุบัน */}
                   <button className="w-full py-3 bg-gray-800 dark:bg-gray-600 hover:bg-gray-900 dark:hover:bg-gray-500 text-white font-bold rounded-xl transition-all shadow-md">
-                    เข้าสู่ระบบด้วยอีเมล
+                    {isLoginView ? "เข้าสู่ระบบด้วยอีเมล" : "สมัครสมาชิกด้วยอีเมล"}
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={handleFacebookLogin}
-                    className="w-full py-3 bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold rounded-xl shadow-lg transition-all flex justify-center items-center gap-2 mt-2"
-                  >
-                    เข้าสู่ระบบด้วย Facebook
-                  </button>
+                  {/* 🌟 เพิ่มส่วนสลับระหว่างหน้า Login และ Register */}
+                  <div className="text-center mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsLoginView(!isLoginView)}
+                      className="text-sm text-emerald-600 hover:underline focus:outline-none"
+                    >
+                      {isLoginView ? "ยังไม่มีบัญชี? สมัครสมาชิก" : "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ"}
+                    </button>
+                  </div>
                 </form>
               </>
             )}

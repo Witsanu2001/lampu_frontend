@@ -1,12 +1,12 @@
 // src/firebase.ts
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getAuth, FacebookAuthProvider, browserLocalPersistence } from "firebase/auth";
+import { getAuth, browserLocalPersistence } from "firebase/auth";
 import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDtAh4kgX22ShZNv5wxcwprOW5Hz886TqU",
-  authDomain: "lampu-frontend.web.app",
+  authDomain: "lampu-5a178.firebaseapp.com",
   projectId: "lampu-5a178",
   storageBucket: "lampu-5a178.firebasestorage.app",
   messagingSenderId: "879165280409",
@@ -22,5 +22,4 @@ export const auth = getAuth(app);
 
 export const db = getDatabase(app);
 
-auth.setPersistence(browserLocalPersistence); 
-export const facebookProvider = new FacebookAuthProvider();
+auth.setPersistence(browserLocalPersistence);

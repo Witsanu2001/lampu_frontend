@@ -31,3 +31,17 @@ export async function postUsersSync(updatedUser: any): Promise<Response> {
   
   return syncResponse;
 }
+
+export async function postSyncUserToRTDB(uid: string): Promise<Response> {
+  const token = await getFreshToken();
+
+  const syncResponse = await fetch(`/api/users/sync_to_live?user_id=${uid}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    }
+  });
+  
+  return syncResponse;
+}

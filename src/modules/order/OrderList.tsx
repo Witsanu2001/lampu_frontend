@@ -334,25 +334,12 @@ export default function OrderList() {
   const handleAssignJobs = async (riderId: string) => {
     try {
       const payload = selectedOrders.map((orderId, index) => {
-        const targetOrder = orders.find((o) => o.id === orderId);
-
-        const totalOrderItemsQty =
-          targetOrder?.mainItems?.reduce(
-            (sum, item) => sum + (item.quantity || 0),
-            0,
-          ) || 0;
-
-        const shippingFee = targetOrder?.totals?.shippingFee || 0;
-
         return {
           order_id: orderId,
           rider_id: riderId,
           queue_number: index + 1,
-          order_set_qty: totalOrderItemsQty,
-          delivery_fee: shippingFee,
         };
       });
-
       await assignBulkOrders(payload);
 
       setIsModalOpen(false);

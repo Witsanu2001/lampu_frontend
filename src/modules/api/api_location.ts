@@ -127,3 +127,22 @@ export async function getLocationsFromDB(userId: string): Promise<any> {
   }
   return json.data;
 }
+
+// แอบแก้ชื่อฟังก์ชันจาก Defual เป็น Default ให้ด้วยนะครับ ^^
+export async function getLocationsDefault(userId: string): Promise<any> {
+  const token = await getFreshToken();
+
+  // 🌟 แก้ไขรูปแบบ URL ให้ตรงกับ Route ของ Backend
+  const response = await fetch(`${apiUrl}/api/users/location_get/default?user_id=${userId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const json = await response.json();
+  if (!response.ok || !json.success) {
+    throw new Error(json.message || "Failed to fetch locations");
+  }
+  return json.data;
+}

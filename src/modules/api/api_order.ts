@@ -109,6 +109,32 @@ export const cancelOrder = async (orderId: string, reason: string, userId: strin
   return data.message;
 };
 
+export async function getOrderUserByToday(): Promise<Order> {
+  const token = await getFreshToken();
+  let userId = ""
+  const userDataString = localStorage.getItem("userData");
+  if (userDataString) {
+    const userData = JSON.parse(userDataString);
+    userId = userData.id || userData.uid || "";
+  }
+
+  const response = await fetch(`${apiUrl}/api/orders/orders_get/${userId}/orderByUserToday`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+  });
+
+  const json = await response.json();
+
+  if (!response.ok || !json.success) {
+    throw new Error(json.message || "Failed to fetch order");
+  }
+
+  return json.data;
+}
+
 export async function getOrderUserById(): Promise<Order> {
   const token = await getFreshToken();
   let userId = ""
@@ -151,7 +177,6 @@ export async function getAddOnMenus(token: string) {
 }
 
 
-// ฟังก์ชันส่งออเดอร์แบบก้อนเดียว พร้อมลำดับคิว
 export async function assignBulkOrders(payload: any[]): Promise<string> {
   const token = await getFreshToken();
   const response = await fetch(`${apiUrl}/api/orders/bulk_assign`, {
