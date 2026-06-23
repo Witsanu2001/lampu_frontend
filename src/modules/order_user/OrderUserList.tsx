@@ -9,7 +9,7 @@ import type { Order } from "../const/order";
 import { onValue, ref } from "firebase/database";
 import { db } from "../const/firebase";
 
-type OrderStatus = "new" | "preparing" | "ready" | "shipping" | "delivered";
+type OrderStatus = "new" | "preparing" | "ready" | "shipping";
 
 const getStatusConfig = (status: OrderStatus) => {
   const configs = {
