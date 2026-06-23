@@ -35,7 +35,7 @@ export async function postUsersSync(updatedUser: any): Promise<Response> {
 export async function postSyncUserToRTDB(uid: string): Promise<Response> {
   const token = await getFreshToken();
 
-  const syncResponse = await fetch(`/api/users/sync_to_live?user_id=${uid}`, {
+  const syncResponse = await fetch(`${apiUrl}/api/users/sync_to_live?user_id=${uid}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
