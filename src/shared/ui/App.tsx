@@ -51,6 +51,16 @@ export default function App() {
   const [blockedUid, setBlockedUid] = useState<string>("");
 
   useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    // ถ้าใน LocalStorage เป็น dark ให้เติมคลาส dark เข้าไปที่แท็ก <html>
+    if (savedTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, []);
+
+  useEffect(() => {
     const db = getDatabase(auth.app);
     const settingsRef = dbRef(db, `live_settings/${PROJECT_NAME}`);
     const unsubscribe = onValue(settingsRef, (snapshot) => {
@@ -202,23 +212,27 @@ export default function App() {
     try {
       const lineIdToken = liff.getIDToken();
       if (!lineIdToken)
-        throw new Error(
-          "ไม่พบ ID Token (ลืมเปิด openid ในระบบ LINE Developers หรือเปล่า?)",
-        );
+        throw new Error("ไม่พบ ID Token (ลืมเปิด openid ในระบบ LINE Developers หรือเปล่า?)");
 
-      const res = await postLineAuth(lineIdToken);
+      // 🚀 1. ยิง API ขอ Profile จาก LINE และ ยิง API ไป Backend ของคุณ "พร้อมกัน"
+      const [profile, res] = await Promise.all([
+        liff.getProfile(),
+        postLineAuth(lineIdToken)
+      ]);
+
+      if (!profile) throw new Error("ดึง Profile จาก LINE ไม่สำเร็จ");
       if (!res.ok) throw new Error(`Backend ตอบกลับ Status: ${res.status}`);
+      
       const data = await res.json();
 
       if (!data.firebase_token)
         throw new Error("Backend ไม่ยอมส่ง Firebase Token กลับมาให้");
 
+      // 🚀 2. รอ Firebase Sign in
       const userCredential = await signInWithCustomToken(
         auth,
         data.firebase_token,
       );
-      const profile = await liff.getProfile();
-      if (!profile) throw new Error("ดึง Profile จาก LINE ไม่สำเร็จ");
 
       const decodedToken = liff.getDecodedIDToken() as any;
       let lineUser: any = {
@@ -230,7 +244,8 @@ export default function App() {
         role: "user",
       };
 
-      const firebaseToken = await userCredential.user.getIdToken(true);
+      // 🚀 3. เอา (true) ออก เพราะเพิ่งล็อกอินเสร็จ Token ยังใหม่อยู่ ดึงมาใช้ได้เลยทันที
+      const firebaseToken = await userCredential.user.getIdToken();
       setToken(firebaseToken, 24);
 
       const syncRes = await postUsersSync(lineUser);
@@ -294,8 +309,14 @@ export default function App() {
 
   if (isAppLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <p>กำลังเชื่อมต่อระบบ...</p>
+      <div className="flex flex-col h-screen w-full items-center justify-center bg-gray-50 dark:bg-gray-900">
+        {/* วงกลมหมุนๆ */}
+        <div className="w-10 h-10 border-4 border-gray-200 border-t-emerald-500 dark:border-gray-700 dark:border-t-emerald-400 rounded-full animate-spin mb-4 shadow-sm"></div>
+        
+        {/* ข้อความกระพริบเบาๆ ให้ดูมีชีวิตชีวา */}
+        <p className="text-gray-500 dark:text-gray-400 text-sm font-medium animate-pulse">
+          กำลังเชื่อมต่อระบบ...
+        </p>
       </div>
     );
   }
