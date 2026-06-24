@@ -3,16 +3,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useCart } from "../../shared/context/CartContext";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { addOrders, getAddOnMenus } from "../api/api_order";
 import { getFreshToken } from "../../shared/infra/auth/token";
 
 // 🌟 นำเข้าคอมโพเนนต์แผนที่
 import SelectMaps from "../address/SelectMaps";
 import { getLocationsDefault } from "../api/api_location";
+import {
+  DEFAULT_CHACOAL,
+  DEFAULT_DELIVERY_FEE,
+  DEFAULT_MEET_UP_FEE,
+  DEFAULT_PAN,
+  DEFAULT_STOVE,
+} from "../../shared/const/config";
 
 export default function Payment() {
   const navigate = useNavigate();
+  const routerLocation = useLocation();
   const { cart, cartTotal, clearCart, updateQuantity, removeFromCart } =
     useCart();
 
@@ -33,8 +41,8 @@ export default function Payment() {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
     null,
   );
-  const [deliveryFee, setDeliveryFee] = useState<number>(10);
-  const [applyDeliveryFee, setApplyDeliveryFee] = useState<boolean>(false);
+  const [deliveryFee, setDeliveryFee] = useState<number>(DEFAULT_DELIVERY_FEE);
+  const [applyDeliveryFee, setApplyDeliveryFee] = useState<boolean>(true);
 
   const [distance, setDistance] = useState<number>(0);
   const [isMeetup, setIsMeetup] = useState<boolean>(false);
@@ -75,29 +83,31 @@ export default function Payment() {
   const closePopup = () => {
     setPopup((prev) => ({ ...prev, isOpen: false }));
   };
-
+  
   useEffect(() => {
     const fetchShippingAddress = async () => {
-      // 1. เช็ค LocalStorage ก่อน
-      const savedAddressesStr = localStorage.getItem("userAddresses");
+      // 🌟 3. ลำดับความสำคัญ: 
+      // ถ้ามีค่าส่งมาจากหน้า Address (state) ให้ใช้ค่านั้นก่อน
+      const state = routerLocation.state as any;
+      if (state?.selectedAddress) {
+        setShippingAddress(state.selectedAddress);
+        return;
+      }
 
-      // ดักขยะเผื่อมีค่าเป็น "null" หรือ "[]"
+      // ถ้าไม่มี state ถึงค่อยเช็ค LocalStorage หรือ API
+      const savedAddressesStr = localStorage.getItem("userAddresses");
       if (savedAddressesStr && savedAddressesStr !== "null" && savedAddressesStr !== "[]") {
         setShippingAddress(JSON.parse(savedAddressesStr));
         return;
       }
 
-      // 2. 🌟 จุดที่แก้บั๊ก: ดักทั้ง id และ uid เพราะ User บางคนไม่มี uid
+      // เช็ค API ปกติ
       const userId = currentUser?.id || currentUser?.uid;
-      
       if (userId) {
         try {
-          console.log("🌐 กำลังเรียก API ของ User:", userId); // ใส่ log ให้เห็นชัดๆ ว่ายิงแล้ว
           const locationData = await getLocationsDefault(userId);
-          
           if (locationData) {
             setShippingAddress(locationData);
-            localStorage.setItem("userAddresses", JSON.stringify(locationData));
           }
         } catch (error) {
           console.error("❌ Failed to fetch default location:", error);
@@ -108,7 +118,7 @@ export default function Payment() {
     if (currentUser) {
       fetchShippingAddress();
     }
-  }, [currentUser]);
+  }, [currentUser, routerLocation.state]);
 
   useEffect(() => {
     let isMounted = true;
@@ -187,7 +197,7 @@ export default function Payment() {
   const [homeImageFile, setHomeImageFile] = useState<File | null>(null);
 
   const MOCK_QR_URL =
-    "https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg";
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTlus3TuguVCRXdx3HsPTVWhPtmx5_n9nBV02SsUgNHA&s=10";
 
   const handleDownloadQR = async () => {
     try {
@@ -202,7 +212,11 @@ export default function Payment() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      showPopup("warning", "ดาวน์โหลดไม่สำเร็จ", "กรุณาลองแคปหน้าจอแทนนะครับ");
+      showPopup(
+        "warning",
+        "ดาวน์โหลดไม่สำเร็จ",
+        "กรุณาลองกดค้างที่รูป QR Code แล้วเลือก 'บันทึกรูปภาพ' แทนนะครับ",
+      );
     }
   };
 
@@ -300,11 +314,17 @@ export default function Payment() {
     );
   };
 
-  const deliveryFeePerSet = isAdmin
-    ? applyDeliveryFee
-      ? deliveryFee
-      : 0
-    : shippingAddress?.deliveryFee || shippingAddress?.fee || 0;
+const deliveryFeePerSet = isAdmin
+  ? (applyDeliveryFee
+      ? (isMeetup 
+          ? DEFAULT_MEET_UP_FEE 
+          : (deliveryFee > 0 ? deliveryFee : DEFAULT_DELIVERY_FEE) // 🌟 ถ้าค่าส่งเป็น 0 ให้ใช้ค่าเริ่มต้นแทน
+        )
+      : 0) // ถ้าไม่ติ๊กคิดเงิน ให้เป็น 0
+  : (isMeetup 
+      ? DEFAULT_MEET_UP_FEE 
+      : (shippingAddress?.deliveryFee || shippingAddress?.fee || 0));
+
   const shippingFee = mainItemsCount * deliveryFeePerSet;
 
   const addOnTotal = selectedAddOns.reduce(
@@ -316,9 +336,9 @@ export default function Payment() {
     ? Math.max(0, stoveCount - mainItemsCount)
     : 0;
   const extraPans = needEquipment ? Math.max(0, panCount - mainItemsCount) : 0;
-  const stoveFee = extraStoves * 30;
-  const panFee = extraPans * 20;
-  const charcoalFee = needEquipment ? charcoalCount * 10 : 0;
+  const stoveFee = extraStoves * DEFAULT_STOVE;
+  const panFee = extraPans * DEFAULT_PAN;
+  const charcoalFee = needEquipment ? charcoalCount * DEFAULT_CHACOAL : 0;
 
   const grandTotal =
     cartTotal + shippingFee + addOnTotal + charcoalFee + stoveFee + panFee;
@@ -427,7 +447,7 @@ export default function Payment() {
         phone: isAdmin ? adminPhone : shippingAddress?.phone || "",
         address: isAdmin
           ? isMeetup
-            ? `[นัดรับนอกสถานที่] ${adminAddressDetail}`
+            ? `[นัดรับ] ${adminAddressDetail}`
             : adminAddressDetail
           : shippingAddress?.address,
         note: isAdmin ? adminAddressDetail : shippingAddress?.details,
@@ -507,6 +527,7 @@ export default function Payment() {
       {showMap && (
         <div className="fixed inset-0 z-50 bg-white">
           <SelectMaps
+            isMeetup={isMeetup}
             onLocationConfirm={(lat, lng, fee, dist, meetup) => {
               setLocation({ lat, lng });
               setDeliveryFee(fee);
@@ -568,10 +589,51 @@ export default function Payment() {
 
               {isAdmin ? (
                 <div className="space-y-4">
+                  {/* 🌟 เพิ่มตัวเลือกรูปแบบการรับสินค้า (จัดส่ง / นัดรับ) สำหรับ Admin */}
+                  <div className="bg-orange-50 dark:bg-gray-700/50 p-4 rounded-xl border border-orange-100 dark:border-gray-600">
+                    <label className="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">
+                      รูปแบบการรับสินค้า
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={!isMeetup}
+                          onChange={() => {
+                            setIsMeetup(false);
+                            setLocation(null); // เคลียร์หมุดเมื่อเปลี่ยนรูปแบบ
+                            setDistance(0);
+                            setDeliveryFee(0);
+                          }}
+                          className="w-5 h-5 text-orange-500 focus:ring-orange-500 cursor-pointer"
+                        />
+                        <span className="font-medium text-gray-800 dark:text-gray-200">
+                          จัดส่งตามที่อยู่ 🛵
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={isMeetup}
+                          onChange={() => {
+                            setIsMeetup(true);
+                            setLocation(null); // เคลียร์หมุดเมื่อเปลี่ยนรูปแบบ
+                            setDistance(0);
+                            setDeliveryFee(0);
+                          }}
+                          className="w-5 h-5 text-orange-500 focus:ring-orange-500 cursor-pointer"
+                        />
+                        <span className="font-medium text-gray-800 dark:text-gray-200">
+                          นัดรับ 🤝
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                        ชื่อลูกค้า (ไม่บังคับ)
+                        ชื่อลูกค้า (ใส่ชื่อเล่นหรือไม่บังคับ)
                       </label>
                       <input
                         type="text"
@@ -599,7 +661,11 @@ export default function Payment() {
                       รายละเอียดที่อยู่ (จำเป็น)
                     </label>
                     <textarea
-                      placeholder="บ้านเลขที่, ซอย, จุดสังเกต..."
+                      placeholder={
+                        isMeetup
+                          ? "สถานที่นัดรับ เช่น หน้าโรงเรียน, ปากซอย..."
+                          : "บ้านเลขที่, ซอย, จุดสังเกต..."
+                      }
                       value={adminAddressDetail}
                       onChange={(e) => setAdminAddressDetail(e.target.value)}
                       className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-white h-24 resize-none"
@@ -614,8 +680,10 @@ export default function Payment() {
                         onChange={(e) => setApplyDeliveryFee(e.target.checked)}
                         className="w-5 h-5 text-blue-500 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
                       />
+                      {/* เปลี่ยนข้อความตรงนี้ครับ */}
                       <span className="font-bold text-gray-800 dark:text-white">
-                        คิดค่าจัดส่ง (ถ้าไม่ติ๊ก = ส่งฟรี 0 บาท)
+                        เปิดระบบคำนวณค่าจัดส่ง (ติ๊กเพื่อคิดเงิน / ไม่ติ๊ก =
+                        ส่งฟรี)
                       </span>
                     </label>
 
@@ -626,23 +694,22 @@ export default function Payment() {
                         {location ? (
                           <div>
                             <p className="text-green-600 dark:text-green-400 font-semibold flex items-center gap-2">
-                              <span>✅ ปักหมุดระยะทางเรียบร้อย</span>
+                              <span>✅ ปักหมุดระยะทางเรียบร้อย ระยะ {distance.toFixed(1)} กม.</span>
                             </p>
                             <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-                              ระยะทาง: {(distance || 0).toFixed(1)} กม. |{" "}
                               {isMeetup ? (
                                 <span className="text-purple-600 font-bold">
-                                  🤝 นัดรับนอกสถานที่
+                                  🤝 ค่าบริการนัดรับ (฿20 x {mainItemsCount}{" "}
+                                  ชุด) = ฿{shippingFee}
                                 </span>
                               ) : deliveryFee === 0 ? (
                                 <span className="text-green-600 font-bold">
                                   🎉 ส่งฟรี
                                 </span>
                               ) : (
-                                <span
-                                  className={`font-bold ${applyDeliveryFee ? "text-orange-600" : "text-gray-400 line-through"}`}
-                                >
-                                  💰 ค่าจัดส่งตามระยะทาง {deliveryFee} บาท
+                                <span className="text-orange-600 font-bold">
+                                  💰 ค่าจัดส่ง (฿{deliveryFeePerSet} x{" "}
+                                  {mainItemsCount} ชุด) = ฿{shippingFee}
                                 </span>
                               )}
                             </p>
@@ -664,7 +731,7 @@ export default function Payment() {
                               <span
                                 className={`font-bold px-2 py-1 rounded-md inline-block ${applyDeliveryFee ? "text-orange-600 bg-orange-100 dark:bg-orange-900/30" : "text-gray-400 bg-gray-200 dark:bg-gray-600 line-through"}`}
                               >
-                                💰 ใช้ค่าจัดส่งเหมาจ่าย {deliveryFee} บาท
+                                💰 ค่าจัดส่ง {deliveryFee} บาท
                               </span>
                             </p>
                           </div>
@@ -981,131 +1048,132 @@ export default function Payment() {
               </div>
             )}
 
-            {/* 5. อุปกรณ์สำหรับปิ้งย่าง */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
-                อุปกรณ์สำหรับปิ้งย่าง 🍳
-              </h2>
-              <div className="flex items-center mb-6 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-700">
-                <label className="flex items-center gap-3 cursor-pointer w-full">
-                  <input
-                    type="checkbox"
-                    checked={needEquipment}
-                    onChange={(e) => handleToggleEquipment(e.target.checked)}
-                    className="w-5 h-5 text-emerald-500 rounded border-gray-300 focus:ring-emerald-500 transition-colors cursor-pointer"
-                  />
-                  <span className="text-gray-800 dark:text-white font-medium">
-                    รับเตาและกระทะ (ยืมฟรีตามจำนวนชุด)
-                  </span>
-                </label>
-              </div>
-
-              {needEquipment && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-down">
-                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <div>
-                      <span className="block text-gray-800 dark:text-white font-medium">
-                        เตาย่าง
-                      </span>
-                      {stoveCount <= mainItemsCount ? (
-                        <span className="block text-xs text-green-500">
-                          ยืมฟรี (โควต้า {mainItemsCount} เตา)
-                        </span>
-                      ) : (
-                        <span className="block text-xs text-red-500">
-                          + ฿30 / เตา (ส่วนเกิน)
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          setStoveCount((prev) => Math.max(0, prev - 1))
-                        }
-                        className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
-                      >
-                        -
-                      </button>
-                      <span className="text-sm font-semibold w-4 text-center dark:text-white">
-                        {stoveCount}
-                      </span>
-                      <button
-                        onClick={() => setStoveCount((prev) => prev + 1)}
-                        className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <div>
-                      <span className="block text-gray-800 dark:text-white font-medium">
-                        กระทะ
-                      </span>
-                      {panCount <= mainItemsCount ? (
-                        <span className="block text-xs text-green-500">
-                          ยืมฟรี (โควต้า {mainItemsCount} ใบ)
-                        </span>
-                      ) : (
-                        <span className="block text-xs text-red-500">
-                          + ฿20 / ใบ (ส่วนเกิน)
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          setPanCount((prev) => Math.max(0, prev - 1))
-                        }
-                        className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
-                      >
-                        -
-                      </button>
-                      <span className="text-sm font-semibold w-4 text-center dark:text-white">
-                        {panCount}
-                      </span>
-                      <button
-                        onClick={() => setPanCount((prev) => prev + 1)}
-                        className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <div>
-                      <span className="block text-gray-800 dark:text-white font-medium">
-                        ถ่าน
-                      </span>
-                      <span className="block text-xs text-red-500">
-                        + ฿10 / ถุง
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          setCharcoalCount((prev) => Math.max(0, prev - 1))
-                        }
-                        className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
-                      >
-                        -
-                      </button>
-                      <span className="text-sm font-semibold w-4 text-center dark:text-white">
-                        {charcoalCount}
-                      </span>
-                      <button
-                        onClick={() => setCharcoalCount((prev) => prev + 1)}
-                        className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
+            {!isMeetup == true && (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
+                  อุปกรณ์สำหรับปิ้งย่าง 🍳
+                </h2>
+                <div className="flex items-center mb-6 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-700">
+                  <label className="flex items-center gap-3 cursor-pointer w-full">
+                    <input
+                      type="checkbox"
+                      checked={needEquipment}
+                      onChange={(e) => handleToggleEquipment(e.target.checked)}
+                      className="w-5 h-5 text-emerald-500 rounded border-gray-300 focus:ring-emerald-500 transition-colors cursor-pointer"
+                    />
+                    <span className="text-gray-800 dark:text-white font-medium">
+                      รับเตาและกระทะ (ยืมฟรีตามจำนวนชุด)
+                    </span>
+                  </label>
                 </div>
-              )}
-            </div>
+
+                {needEquipment && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-down">
+                    <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <div>
+                        <span className="block text-gray-800 dark:text-white font-medium">
+                          เตาย่าง
+                        </span>
+                        {stoveCount <= mainItemsCount ? (
+                          <span className="block text-xs text-green-500">
+                            ยืมฟรี (โควต้า {mainItemsCount} เตา)
+                          </span>
+                        ) : (
+                          <span className="block text-xs text-red-500">
+                            + ฿{DEFAULT_STOVE} / เตา (ส่วนเกิน)
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() =>
+                            setStoveCount((prev) => Math.max(0, prev - 1))
+                          }
+                          className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
+                        >
+                          -
+                        </button>
+                        <span className="text-sm font-semibold w-4 text-center dark:text-white">
+                          {stoveCount}
+                        </span>
+                        <button
+                          onClick={() => setStoveCount((prev) => prev + 1)}
+                          className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <div>
+                        <span className="block text-gray-800 dark:text-white font-medium">
+                          กระทะ
+                        </span>
+                        {panCount <= mainItemsCount ? (
+                          <span className="block text-xs text-green-500">
+                            ยืมฟรี (โควต้า {mainItemsCount} ใบ)
+                          </span>
+                        ) : (
+                          <span className="block text-xs text-red-500">
+                            + ฿{DEFAULT_PAN} / ใบ (ส่วนเกิน)
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() =>
+                            setPanCount((prev) => Math.max(0, prev - 1))
+                          }
+                          className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
+                        >
+                          -
+                        </button>
+                        <span className="text-sm font-semibold w-4 text-center dark:text-white">
+                          {panCount}
+                        </span>
+                        <button
+                          onClick={() => setPanCount((prev) => prev + 1)}
+                          className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <div>
+                        <span className="block text-gray-800 dark:text-white font-medium">
+                          ถ่าน
+                        </span>
+                        <span className="block text-xs text-red-500">
+                          + ฿{DEFAULT_CHACOAL} / ถุง
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() =>
+                            setCharcoalCount((prev) => Math.max(0, prev - 1))
+                          }
+                          className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 rounded text-gray-800 dark:text-white"
+                        >
+                          -
+                        </button>
+                        <span className="text-sm font-semibold w-4 text-center dark:text-white">
+                          {charcoalCount}
+                        </span>
+                        <button
+                          onClick={() => setCharcoalCount((prev) => prev + 1)}
+                          className="w-6 h-6 flex items-center justify-center bg-emerald-500 text-white rounded shadow-sm hover:scale-105 transition-transform"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* 6. สรุปยอดรวมทั้งหมด */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 space-y-4">
@@ -1222,23 +1290,24 @@ export default function Payment() {
                     </label>
 
                     {paymentMethod === "promptpay" && (
-                      <div className="ml-8 mt-2 p-6 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center">
+                      <div className="mt-2 p-6 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center">
                         <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 text-center">
                           สแกน QR Code เพื่อชำระเงินจำนวน{" "}
                           <strong className="text-emerald-500 text-lg">
                             ฿{grandTotal.toLocaleString()}
                           </strong>
                         </p>
-                        <div className="bg-white p-4 rounded-xl shadow-sm mb-4">
+                        <div className="p-1 rounded-xl shadow-sm mb-4">
                           <img
                             src={MOCK_QR_URL}
                             alt="PromptPay QR Code"
-                            className="w-48 h-48 object-contain"
+                            className="w-60 h-60 object-contain"
                           />
                         </div>
+
                         <button
                           onClick={handleDownloadQR}
-                          className="mb-6 flex items-center justify-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg text-sm font-semibold transition-colors"
+                          className="mb-2 flex items-center justify-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg text-sm font-semibold transition-colors"
                         >
                           <svg
                             className="w-5 h-5"
@@ -1255,6 +1324,19 @@ export default function Payment() {
                           </svg>
                           บันทึก QR Code
                         </button>
+
+                        <p className="text-xs text-red-500 dark:text-red-400 mb-6 text-center max-w-xs">
+                          💡 สำหรับผู้ใช้ iPhone/iPad หากดาวน์โหลดไม่สำเร็จ{" "}
+                          <br />
+                          แนะนำให้{" "}
+                          <span className="font-bold underline">
+                            กดค้างที่รูปภาพ
+                          </span>{" "}
+                          แล้วเลือก{" "}
+                          <span className="font-bold underline">
+                            "บันทึกรูปภาพ"
+                          </span>
+                        </p>
                         <div className="w-full">
                           <label className="block text-sm font-semibold text-gray-800 dark:text-white mb-2">
                             อัปโหลดสลิปหลักฐานการโอนเงิน

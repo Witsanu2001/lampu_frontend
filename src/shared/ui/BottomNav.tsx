@@ -26,8 +26,7 @@ export default function BottomNav({
             key={index}
             to={item.to}
             className={`flex flex-col items-center p-4 rounded-lg transition-all duration-200 
-              /* Native Effect: กดแล้วยุบและจางลงเล็กน้อย */
-              active:scale-95 active:opacity-80
+              active:opacity-80
               ${
                 isActive
                   ? "bg-emerald-200 dark:bg-emerald-700/50 text-emerald-800 dark:text-emerald-300"

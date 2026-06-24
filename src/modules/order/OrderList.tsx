@@ -168,7 +168,7 @@ const getStatusConfig = (status: OrderStatus) => {
       dotColor: "bg-red-500",
     },
     edit: {
-       label: "รอตรวจสอบ",
+      label: "รอตรวจสอบ",
       bgColor: "bg-yellow-50 dark:bg-yellow-500/10",
       textColor: "text-yellow-700 dark:text-yellow-400",
       dotColor: "bg-yellow-500",
@@ -534,10 +534,8 @@ export default function OrderList() {
                         : "border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:-translate-y-0.5"
                     }`}
                   >
-                    {/* Header ของ Card */}
                     <div className="px-4 py-3 border-b border-gray-50 dark:border-gray-700/50 flex justify-between items-start gap-3">
                       <div className="flex items-start gap-3 flex-1 min-w-0">
-                        {/* 🌟 ปุ่ม Checkbox จัดคิว (มีเฉพาะแท็บ Kitchen) ย่อขนาดลง */}
                         {activeTab === "kitchen" && (
                           <div
                             onClick={(e) =>
@@ -558,10 +556,13 @@ export default function OrderList() {
                         <div className="flex-1 min-w-0">
                           <h2 className="text-[15px] font-bold text-gray-900 dark:text-white truncate">
                             {order.shipping?.recipient || "ไม่ระบุชื่อ"}
+                            <span className="ml-3 text-gray-600 dark:text-gray-400 font-normal">
+                              {order.shipping?.phone || ""}
+                            </span>
                           </h2>
                           <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap items-center gap-1.5">
                             <span className="opacity-80">
-                              #{order.id.slice(-6)}
+                              #{order.id.slice(-8)}
                             </span>
                             <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
                             <span>{formatDate(order.created_at)}</span>
@@ -569,9 +570,7 @@ export default function OrderList() {
                         </div>
                       </div>
 
-                      {/* 🌟 ด้านขวา: จัดกลุ่มป้าย Status และ เหตุผล ไว้ด้วยกัน (ชิดขวา) */}
                       <div className="flex flex-col items-end gap-1 shrink-0">
-                        {/* ป้าย Status */}
                         <span
                           className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap flex items-center gap-1.5 ${statusConfig.bgColor} ${statusConfig.textColor}`}
                         >
@@ -581,11 +580,10 @@ export default function OrderList() {
                           {statusConfig.label}
                         </span>
 
-                        {/* เหตุผลที่ปฏิเสธ (อยู่ใต้สถานะ และจะตรงกับระดับของเวลาฝั่งซ้ายพอดี) */}
                         {order.status === "refuse" && order.cancel_reason && (
                           <span
                             className="text-[10px] font-medium text-red-500 dark:text-red-400 truncate max-w-[120px]"
-                            title={order.cancel_reason} // วางเมาส์เพื่อดูข้อความเต็มๆ ได้ถ้ามันยาวเกินไป
+                            title={order.cancel_reason}
                           >
                             {order.cancel_reason}
                           </span>
@@ -641,7 +639,6 @@ export default function OrderList() {
                           </span>
                         </div>
 
-                        {/* สถานะอุปกรณ์ รับเตากระทะ */}
                         {order.equipment?.needEquipment && (
                           <span className="shrink-0 bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400 px-2 py-0.5 rounded-md font-semibold border border-orange-100 dark:border-orange-800/30">
                             รับเตากระทะ{" "}
@@ -649,7 +646,7 @@ export default function OrderList() {
                               order.equipment.stoveCount || 1,
                               order.equipment.panCount || 1,
                             )}{" "}
-                            ชุด
+                            ชุด + ถ่าน {order.equipment.charcoalCount} ถุง
                           </span>
                         )}
                       </div>

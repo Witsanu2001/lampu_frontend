@@ -10,10 +10,10 @@ import turfCircle from "@turf/circle";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { Order } from "../const/order";
 import { cancelOrder, getOrderById, updateStatus } from "../api/api_order";
+import { DEFAULT_SHOP_LATL, DEFAULT_SHOP_LNGL } from "../../shared/const/config";
 
-// 🌟 กำหนดพิกัดร้าน
-const SHOP_LAT = 8.301677;
-const SHOP_LNG = 99.365736;
+const SHOP_LAT = DEFAULT_SHOP_LATL
+const SHOP_LNG = DEFAULT_SHOP_LNGL
 
 export default function OrderDetail() {
   const { orderId } = useParams<{ orderId: string }>();
@@ -180,7 +180,6 @@ export default function OrderDetail() {
     setIsRefuseModalOpen(true);
   };
 
-  // ✨ ปรับปรุงปุ่มยืนยันการปฏิเสธ
   const submitRefuseOrder = async () => {
     if (!orderId) return;
 
@@ -191,16 +190,11 @@ export default function OrderDetail() {
       return;
     }
 
-    const userDataString = localStorage.getItem("userData");
-    const userData = userDataString ? JSON.parse(userDataString) : null;
-    const currentUserId = userData?.uid;
+    // ✨ ดึง user_id จาก order โดยตรง แทนการใช้ localStorage
+    const currentUserId = order?.user_id;
 
     if (!currentUserId) {
-      showPopup(
-        "error",
-        "ข้อผิดพลาด",
-        "ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่อีกครั้ง",
-      );
+      showPopup("error", "ข้อผิดพลาด", "ไม่พบข้อมูลผู้สั่งซื้อในออเดอร์นี้");
       return;
     }
 
@@ -255,29 +249,92 @@ export default function OrderDetail() {
     );
   }
 
+  type OrderStatus = "new" | "preparing" | "ready" | "shipping" | "delivered";
+
+  const getStatusConfig = (status: OrderStatus) => {
+    const configs = {
+      new: {
+        label: "ออเดอร์ใหม่",
+        bgColor: "bg-blue-100 dark:bg-blue-500/20",
+        textColor: "text-blue-700 dark:text-blue-400",
+        dotColor: "bg-blue-500",
+      },
+      refuse: {
+        label: "ปฎิเสธ",
+        bgColor: "bg-red-100 dark:bg-red-500/20",
+        textColor: "text-red-700 dark:text-red-400",
+        dotColor: "bg-red-500",
+      },
+      edit: {
+        label: "รอตรวจสอบ",
+        bgColor: "bg-yellow-50 dark:bg-yellow-500/10",
+        textColor: "text-yellow-700 dark:text-yellow-400",
+        dotColor: "bg-yellow-500",
+      },
+      preparing: {
+        label: "กำลังเตรียม",
+        bgColor: "bg-orange-100 dark:bg-orange-500/20",
+        textColor: "text-orange-700 dark:text-orange-400",
+        dotColor: "bg-orange-500",
+      },
+      ready: {
+        label: "พร้อมส่ง",
+        bgColor: "bg-purple-100 dark:bg-purple-500/20",
+        textColor: "text-purple-700 dark:text-purple-400",
+        dotColor: "bg-purple-500",
+      },
+      shipping: {
+        label: "กำลังไปส่ง",
+        bgColor: "bg-indigo-100 dark:bg-indigo-500/20",
+        textColor: "text-indigo-700 dark:text-indigo-400",
+        dotColor: "bg-indigo-500",
+      },
+      delivered: {
+        label: "ส่งสำเร็จ",
+        bgColor: "bg-emerald-100 dark:bg-emerald-500/20",
+        textColor: "text-emerald-700 dark:text-emerald-400",
+        dotColor: "bg-emerald-500",
+      },
+    };
+    return configs[status] || configs["new"];
+  };
+
+  const statusConfig = getStatusConfig((order.status as OrderStatus) || "new");
+
   return (
     <div className="h-full p-6 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 relative">
       {/* Header */}
       <div className="mb-6">
-        <button
-          onClick={() => navigate("/orders")}
-          className="flex items-center text-2xl text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 mb-3"
-        >
-          <svg
-            className="w-6 h-6 mt-1"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="flex justify-between items-center">
+          <button
+            onClick={() => navigate("/orders")}
+            className="flex items-center text-2xl text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 mb-3"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          รายละเอียดออเดอร์
-        </button>
+            <svg
+              className="w-6 h-6 mt-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            รายละเอียดออเดอร์
+          </button>
+
+          <span
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap flex items-center gap-1.5 ${statusConfig.bgColor} ${statusConfig.textColor}`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor} animate-pulse`}
+            ></span>
+            {statusConfig.label}
+          </span>
+        </div>
 
         <div className="flex flex-wrap w-full items-center justify-between gap-x-4 gap-y-1">
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 whitespace-nowrap">
@@ -370,42 +427,49 @@ export default function OrderDetail() {
           </div>
         )}
 
-        {/* Equipment */}
-        <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
-          <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">
-            อุปกรณ์
-          </h2>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">เตา:</span>
-              <span>{order.equipment?.stoveCount} ชุด</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">กระทะ:</span>
-              <span>{order.equipment?.panCount} ใบ</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">ถ่าน:</span>
-              <span>{order.equipment?.charcoalCount} ก้อน</span>
-            </div>
-            {order.equipment?.extraStoves > 0 && (
+        {order.equipment?.needEquipment ? (
+          <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
+            <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">
+              อุปกรณ์
+            </h2>
+            <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">
-                  เตาเพิ่ม:
-                </span>
-                <span>{order.equipment.extraStoves} ชุด</span>
+                <span className="text-gray-600 dark:text-gray-400">เตา:</span>
+                <span>{order.equipment?.stoveCount} ชุด</span>
               </div>
-            )}
-            {order.equipment?.extraPans > 0 && (
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">
-                  กระทะเพิ่ม:
-                </span>
-                <span>{order.equipment.extraPans} ใบ</span>
+                <span className="text-gray-600 dark:text-gray-400">กระทะ:</span>
+                <span>{order.equipment?.panCount} ใบ</span>
               </div>
-            )}
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">ถ่าน:</span>
+                <span>{order.equipment?.charcoalCount} ถุง</span>
+              </div>
+              {order.equipment?.extraStoves > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    เตาเพิ่ม:
+                  </span>
+                  <span>{order.equipment.extraStoves} ชุด</span>
+                </div>
+              )}
+              {order.equipment?.extraPans > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    กระทะเพิ่ม:
+                  </span>
+                  <span>{order.equipment.extraPans} ใบ</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
+            <h2 className="font-semibold text-red-600 dark:text-red-400">
+              ไม่รับเตาและกระทะ
+            </h2>
+          </div>
+        )}
 
         {/* Shipping */}
         <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
@@ -579,150 +643,128 @@ export default function OrderDetail() {
         )}
       </div>
 
-      {/* 🌟 Modal สำหรับแสดงแผนที่ */}
+      {/* 🌟 Modal สำหรับแสดงแผนที่แบบเต็มหน้าจอ (Floating UI) */}
       {isMapModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col h-[80vh] animate-in fade-in zoom-in duration-200">
-            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
-              <h3 className="font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                <svg
-                  className="w-5 h-5 text-orange-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                  />
-                </svg>
-                สถานที่จัดส่ง
-              </h3>
-              <button
-                onClick={() => setIsMapModalOpen(false)}
-                className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-full transition-colors"
-              >
-                <svg
-                  className="w-5 h-5 text-gray-600 dark:text-gray-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
+        <div className="fixed inset-0 z-[100] w-screen h-screen bg-gray-100 dark:bg-gray-900 animate-in fade-in zoom-in duration-200">
+          {/* 🗺️ ตัวแผนที่ (กางเต็ม 100% ของหน้าจอ) */}
+          <div className="absolute inset-0 w-full h-full">
+            <Map
+              {...viewState}
+              onMove={(evt) => setViewState(evt.viewState)}
+              mapStyle="mapbox://styles/mapbox/streets-v12"
+              mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
+              style={{ width: "100%", height: "100%" }}
+            >
+              <Source id="zone3-source" type="geojson" data={zones.zone3}>
+                <Layer
+                  id="zone3-layer"
+                  type="fill"
+                  paint={{
+                    "fill-color": "#ef4444",
+                    "fill-opacity": 0.06,
+                    "fill-outline-color": "#ef4444",
+                  }}
+                />
+              </Source>
+              <Source id="zone2-source" type="geojson" data={zones.zone2}>
+                <Layer
+                  id="zone2-layer"
+                  type="fill"
+                  paint={{
+                    "fill-color": "#f59e0b",
+                    "fill-opacity": 0.1,
+                    "fill-outline-color": "#f59e0b",
+                  }}
+                />
+              </Source>
+              <Source id="zone1-source" type="geojson" data={zones.zone1}>
+                <Layer
+                  id="zone1-layer"
+                  type="fill"
+                  paint={{
+                    "fill-color": "#10b981",
+                    "fill-opacity": 0.12,
+                    "fill-outline-color": "#10b981",
+                  }}
+                />
+              </Source>
 
-            <div className="flex-1 relative bg-gray-100 dark:bg-gray-800">
-              <Map
-                {...viewState}
-                onMove={(evt) => setViewState(evt.viewState)}
-                mapStyle="mapbox://styles/mapbox/streets-v12"
-                mapboxAccessToken={import.meta.env.VITE_MAPBOX_TOKEN}
-                style={{ width: "100%", height: "100%" }}
-              >
-                <Source id="zone3-source" type="geojson" data={zones.zone3}>
+              {routeData && (
+                <Source id="route-source" type="geojson" data={routeData}>
                   <Layer
-                    id="zone3-layer"
-                    type="fill"
+                    id="route-layer"
+                    type="line"
                     paint={{
-                      "fill-color": "#ef4444",
-                      "fill-opacity": 0.06,
-                      "fill-outline-color": "#ef4444",
+                      "line-color": "#3b82f6",
+                      "line-width": 5,
+                      "line-opacity": 0.8,
                     }}
+                    layout={{ "line-cap": "round", "line-join": "round" }}
                   />
                 </Source>
-                <Source id="zone2-source" type="geojson" data={zones.zone2}>
-                  <Layer
-                    id="zone2-layer"
-                    type="fill"
-                    paint={{
-                      "fill-color": "#f59e0b",
-                      "fill-opacity": 0.1,
-                      "fill-outline-color": "#f59e0b",
-                    }}
-                  />
-                </Source>
-                <Source id="zone1-source" type="geojson" data={zones.zone1}>
-                  <Layer
-                    id="zone1-layer"
-                    type="fill"
-                    paint={{
-                      "fill-color": "#10b981",
-                      "fill-opacity": 0.12,
-                      "fill-outline-color": "#10b981",
-                    }}
-                  />
-                </Source>
+              )}
 
-                {routeData && (
-                  <Source id="route-source" type="geojson" data={routeData}>
-                    <Layer
-                      id="route-layer"
-                      type="line"
-                      paint={{
-                        "line-color": "#3b82f6",
-                        "line-width": 5,
-                        "line-opacity": 0.8,
-                      }}
-                      layout={{ "line-cap": "round", "line-join": "round" }}
-                    />
-                  </Source>
-                )}
+              <Marker longitude={SHOP_LNG} latitude={SHOP_LAT} anchor="bottom">
+                <div className="relative flex flex-col items-center justify-center cursor-pointer hover:scale-110 transition-transform origin-bottom">
+                  <div className="bg-orange-500 rounded-full w-10 h-10 flex items-center justify-center shadow-md border-2 border-white z-10">
+                    <span className="text-xl">🥘</span>
+                  </div>
+                  <div className="w-3 h-3 bg-orange-500 rotate-45 -mt-2 border-b-2 border-r-2 border-white shadow-sm rounded-sm"></div>
+                </div>
+              </Marker>
 
+              {order.shipping?.location && (
                 <Marker
-                  longitude={SHOP_LNG}
-                  latitude={SHOP_LAT}
+                  longitude={order.shipping.location.lng}
+                  latitude={order.shipping.location.lat}
                   anchor="bottom"
                 >
                   <div className="relative flex flex-col items-center justify-center cursor-pointer hover:scale-110 transition-transform origin-bottom">
-                    <div className="bg-orange-500 rounded-full w-10 h-10 flex items-center justify-center shadow-md border-2 border-white z-10">
-                      <span className="text-xl">🥘</span>
+                    <div className="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center shadow-md border-2 border-white z-10">
+                      <svg
+                        className="w-5 h-5 text-white"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                      </svg>
                     </div>
-                    <div className="w-3 h-3 bg-orange-500 rotate-45 -mt-2 border-b-2 border-r-2 border-white shadow-sm rounded-sm"></div>
+                    <div className="w-3 h-3 bg-blue-600 rotate-45 -mt-2 border-b-2 border-r-2 border-white shadow-sm rounded-sm"></div>
                   </div>
                 </Marker>
+              )}
+            </Map>
+          </div>
 
-                {order.shipping?.location && (
-                  <Marker
-                    longitude={order.shipping.location.lng}
-                    latitude={order.shipping.location.lat}
-                    anchor="bottom"
-                  >
-                    <div className="relative flex flex-col items-center justify-center cursor-pointer hover:scale-110 transition-transform origin-bottom">
-                      <div className="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center shadow-md border-2 border-white z-10">
-                        <svg
-                          className="w-5 h-5 text-white"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                        </svg>
-                      </div>
-                      <div className="w-3 h-3 bg-blue-600 rotate-45 -mt-2 border-b-2 border-r-2 border-white shadow-sm rounded-sm"></div>
-                    </div>
-                  </Marker>
-                )}
-              </Map>
-            </div>
+          {/* ❌ ปุ่มปิด (ลอยอยู่มุมขวาบน) */}
+          <button
+            onClick={() => setIsMapModalOpen(false)}
+            className="absolute top-6 right-6 z-20 w-12 h-12 flex items-center justify-center bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 hover:scale-105 transition-transform"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
 
-            <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex flex-col sm:flex-row justify-between gap-2">
-                <p className="text-sm text-gray-700 dark:text-gray-300 flex-1">
-                  <span className="font-bold text-gray-900 dark:text-white">
-                    ที่อยู่จัดส่ง:
-                  </span>{" "}
+          {/* 📝 กล่องข้อมูลที่อยู่ (ลอยอยู่ด้านล่าง) */}
+          <div className="absolute bottom-8 left-4 right-4 z-20 pointer-events-none">
+            <div className="max-w-3xl mx-auto bg-white/95 dark:bg-gray-800/95 backdrop-blur-md p-5 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 pointer-events-auto">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <p className="text-gray-700 dark:text-gray-300 flex-1 leading-relaxed">
                   {order.shipping?.address}
                 </p>
                 {routeDistance !== null && (
-                  <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-lg flex items-center justify-center whitespace-nowrap">
+                  <div className="text-sm font-bold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/50 px-4 py-2.5 rounded-xl whitespace-nowrap shadow-sm">
                     🚗 ระยะทาง: {routeDistance.toFixed(2)} กม.
                   </div>
                 )}
@@ -768,12 +810,12 @@ export default function OrderDetail() {
                   <input
                     type="radio"
                     name="reason"
-                    value="สินค้าหมด / วัตถุดิบไม่พอ"
-                    checked={refuseReason === "สินค้าหมด / วัตถุดิบไม่พอ"}
+                    value="วัตถุดิบหมด"
+                    checked={refuseReason === "วัตถุดิบหมด"}
                     onChange={(e) => setRefuseReason(e.target.value)}
                     className="w-4 h-4 text-red-600"
                   />
-                  <span>สินค้าหมด / วัตถุดิบไม่พอ</span>
+                  <span>วัตถุดิบหมด</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input

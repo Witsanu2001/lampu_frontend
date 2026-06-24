@@ -44,6 +44,7 @@ export interface Location {
 
 export interface Shipping {
   address: string;
+  phone: string;
   recipient: string
   location: Location;
   feePerSet: number;

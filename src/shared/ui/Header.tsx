@@ -175,8 +175,8 @@ export default function Header({ user, setUser }: HeaderProps) {
               alt="Profile"
               className="w-10 h-10 rounded-full object-cover border"
               onError={(e: any) => {
-                e.target.onerror = null; // ป้องกันการพยายามโหลดซ้ำไม่สิ้นสุด
-                e.target.src = defaultAvatar; // 🌟 3. ถ้า URL ของรูปเสีย (โหลดไม่ขึ้น) ให้เปลี่ยนเป็นรูปที่ import มา
+                e.target.onerror = null;
+                e.target.src = defaultAvatar;
               }}
             />
 

@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/purity */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import SelectMaps from "./SelectMaps";
 import { useNavigate } from "react-router-dom";
@@ -23,10 +25,8 @@ interface AddressItem {
 
 export default function Address() {
   const navigate = useNavigate();
-  
-  // 🌟 กลับมาใช้ Array เพื่อให้แสดงได้หลายรายการในหน้าเว็บ
-  const [addresses, setAddresses] = useState<AddressItem[]>([]);
 
+  const [addresses, setAddresses] = useState<AddressItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -34,106 +34,77 @@ export default function Address() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [addressDetails, setAddressDetails] = useState("");
   const [deliveryNote, setDeliveryNote] = useState("");
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
+    null,
+  );
 
   const [deliveryFee, setDeliveryFee] = useState<number>(0);
   const [distance, setDistance] = useState<number>(0);
   const [isMeetup, setIsMeetup] = useState<boolean>(false);
+
   const [showMap, setShowMap] = useState(false);
-  const [isDefault, setIsDefault] = useState(false);
-
-  // 🌟 ฟังก์ชันจัดการ LocalStorage โดยเฉพาะ (คัดเอาแค่ Object ของที่อยู่หลักไปเซฟ)
-  const syncDefaultAddressToLocalStorage = (addressList: AddressItem[]) => {
-    const defaultAddr = addressList.find((a) => a.isDefault) || addressList[0];
-    if (defaultAddr) {
-      // เซฟเป็น Object ตัวเดียว
-      localStorage.setItem("userAddresses", JSON.stringify(defaultAddr));
-    } else {
-      localStorage.removeItem("userAddresses");
-    }
-  };
-
-  const handleOpenForm = (addressToEdit?: AddressItem) => {
-    if (addressToEdit) {
-      setEditingId(addressToEdit.id);
-      setRecipientName(addressToEdit.name || "");
-      setPhoneNumber(addressToEdit.phone || "");
-      setAddressDetails(addressToEdit.details);
-      setDeliveryNote(addressToEdit.note || "");
-      setLocation(addressToEdit.location);
-      setDeliveryFee(addressToEdit.deliveryFee || 0);
-      setDistance(addressToEdit.distance || 0);
-      setIsMeetup(addressToEdit.isMeetup || false);
-      setIsDefault(addressToEdit.isDefault);
-    } else {
-      setEditingId(null);
-      setRecipientName("");
-      setPhoneNumber("");
-      setAddressDetails("");
-      setDeliveryNote("");
-      setLocation(null);
-      setDeliveryFee(0);
-      setDistance(0);
-      setIsMeetup(false);
-      setIsDefault(addresses.length === 0);
-    }
-    setShowForm(true);
-    setShowMap(false);
-  };
+  const [currentUser] = useState<any>(() => {
+    const userDataString = localStorage.getItem("userData");
+    return userDataString ? JSON.parse(userDataString) : null;
+  });
 
   useEffect(() => {
-    const fetchLocations = async () => {
-      const userDataString = localStorage.getItem("userData");
-      if (userDataString) {
-        const userData = JSON.parse(userDataString);
-        const userId = userData.id || userData.uid || "";
+    const loadAddresses = async (userId: string) => {
+      try {
+        const data = await getLocationsFromDB(userId);
 
-        if (userId) {
-          try {
-            const dbLocations = await getLocationsFromDB(userId);
-            if (dbLocations) {
-              setAddresses(dbLocations);
-              syncDefaultAddressToLocalStorage(dbLocations);
-            }
-          } catch (error) {
-            console.error("Failed to fetch locations from DB:", error);
-          }
+        // 🌟 จัดเรียงให้ที่อยู่ "เริ่มต้น" อยู่บนสุดเสมอ
+        const sortedData = data.sort(
+          (a: AddressItem, b: AddressItem) =>
+            (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0),
+        );
+
+        setAddresses(sortedData);
+
+        if (sortedData.length > 0) {
+          const defaultAddress =
+            sortedData.find((a: AddressItem) => a.isDefault) || sortedData[0];
+          localStorage.setItem("userAddresses", JSON.stringify(defaultAddress));
         }
+      } catch (error) {
+        console.error("Error loading addresses:", error);
       }
     };
 
-    fetchLocations();
-  }, []);
+    if (currentUser) {
+      loadAddresses(currentUser.uid || currentUser.id);
+    } else {
+      navigate("/login");
+    }
+  }, [currentUser, navigate]);
 
-  const handleSave = async () => {
-    if (!recipientName.trim()) {
-      alert("กรุณากรอกชื่อผู้รับครับ/ค่ะ");
-      return;
+  const handleMeetupChange = (meetup: boolean) => {
+    if (isMeetup !== meetup) {
+      setIsMeetup(meetup);
+      setLocation(null);
+      setDeliveryFee(0);
+      setDistance(0);
     }
-    if (!phoneNumber.trim() || phoneNumber.length !== 10) {
-      alert("กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลักครับ/ค่ะ");
-      return;
-    }
-    if (!addressDetails.trim()) {
-      alert("กรุณากรอกรายละเอียดที่อยู่ครับ/ค่ะ");
-      return;
-    }
-    if (!location) {
-      alert("กรุณาปักหมุดบนแผนที่ครับ/ค่ะ");
+  };
+
+  const handleSaveAddress = async () => {
+    if (!currentUser) return;
+    const userId = currentUser.uid || currentUser.id;
+
+    if (
+      !recipientName.trim() ||
+      !phoneNumber.trim() ||
+      !addressDetails.trim() ||
+      !location
+    ) {
+      alert("กรุณากรอกข้อมูลให้ครบถ้วนและเลือกตำแหน่งบนแผนที่");
       return;
     }
 
-    let userId = "";
-    const userDataString = localStorage.getItem("userData");
-    if (userDataString) {
-      const userData = JSON.parse(userDataString);
-      userId = userData.id || userData.uid || "";
-    }
-
-    if (!userId) {
-      alert("ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่");
-      return;
-    }
+    // 🌟 ดึงสถานะ isDefault เดิมมาใช้ถ้าเป็นการแก้ไข
+    const isCurrentlyDefault = editingId
+      ? addresses.find((a) => a.id === editingId)?.isDefault || false
+      : addresses.length === 0;
 
     const newAddress: AddressItem = {
       id: editingId || Date.now().toString(),
@@ -145,338 +116,497 @@ export default function Address() {
       deliveryFee,
       distance,
       isMeetup,
-      isDefault: addresses.length === 0 ? true : isDefault,
+      isDefault: isCurrentlyDefault,
     };
 
     try {
       if (editingId) {
-        await updateLocationInDB(newAddress, userId);
-      } else {
-        await saveLocationToDB(newAddress, userId);
-      }
-
-      let updatedAddresses = [...addresses];
-
-      if (editingId) {
-        updatedAddresses = updatedAddresses.map((addr) =>
-          addr.id === editingId ? newAddress : addr
+        await updateLocationInDB(userId, newAddress);
+        setAddresses((prev) =>
+          prev.map((addr) => (addr.id === editingId ? newAddress : addr)),
         );
       } else {
-        updatedAddresses.push(newAddress);
+        await saveLocationToDB(userId, newAddress);
+        setAddresses((prev) => [...prev, newAddress]);
       }
 
-      // ถ้าติ๊กเป็นค่าเริ่มต้น ให้เอาค่าเริ่มต้นของอันเก่าออก
-      if (newAddress.isDefault) {
-        updatedAddresses = updatedAddresses.map((addr) => ({
-          ...addr,
-          isDefault: addr.id === newAddress.id,
-        }));
+      if (newAddress.isDefault || addresses.length === 0) {
+        localStorage.setItem("userAddresses", JSON.stringify(newAddress));
       }
 
-      setAddresses(updatedAddresses);
-      syncDefaultAddressToLocalStorage(updatedAddresses); // 🌟 เซฟเฉพาะ Object ลง LS
-      setShowForm(false);
-      alert("บันทึกที่อยู่เรียบร้อยแล้ว! 📍");
+      resetForm();
     } catch (error) {
-      console.error("Save location error:", error);
-      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูลลงระบบฐานข้อมูล");
+      console.error("Error saving address:", error);
+      alert("ไม่สามารถบันทึกที่อยู่ได้ กรุณาลองใหม่");
     }
+  };
+
+  // 🌟 ฟังก์ชันสำหรับตั้งเป็นที่อยู่เริ่มต้น
+  const handleSetDefault = async (address: AddressItem) => {
+    if (!currentUser) return;
+    const userId = currentUser.uid || currentUser.id;
+
+    try {
+      const updatedAddress = { ...address, isDefault: true };
+
+      // อัปเดตในฐานข้อมูล
+      await updateLocationInDB(userId, updatedAddress);
+
+      // อัปเดต State หน้าเว็บ (ให้ตัวที่เลือกเป็น true ตัวอื่นเป็น false)
+      const newAddresses = addresses.map((addr) => ({
+        ...addr,
+        isDefault: addr.id === address.id,
+      }));
+
+      // จัดเรียงให้ตัวที่เป็น Default เด้งขึ้นไปอยู่บนสุด
+      newAddresses.sort(
+        (a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0),
+      );
+
+      setAddresses(newAddresses);
+
+      // อัปเดต LocalStorage เพื่อให้หน้า Payment ดึงไปใช้
+      localStorage.setItem("userAddresses", JSON.stringify(updatedAddress));
+    } catch (error) {
+      console.error("Error setting default address:", error);
+      alert("เกิดข้อผิดพลาดในการตั้งที่อยู่เริ่มต้น");
+    }
+  };
+
+  const handleEdit = (address: AddressItem) => {
+    setEditingId(address.id);
+    setRecipientName(address.name);
+    setPhoneNumber(address.phone);
+    setAddressDetails(address.details);
+    setDeliveryNote(address.note || "");
+    setLocation(address.location);
+    setDeliveryFee(address.deliveryFee);
+    setDistance(address.distance);
+    setIsMeetup(address.isMeetup || false);
+    setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบที่อยู่นี้?")) {
-      try {
-        await deleteLocationFromDB(id);
-        const updatedAddresses = addresses.filter((addr) => addr.id !== id);
-        
-        // ถ้าเผลอลบตัว Default ไป ให้ตั้งตัวแรกที่เหลืออยู่เป็น Default แทน
-        if (updatedAddresses.length > 0 && !updatedAddresses.some(a => a.isDefault)) {
-            updatedAddresses[0].isDefault = true;
-        }
+    if (!currentUser || !window.confirm("คุณต้องการลบที่อยู่นี้ใช่หรือไม่?"))
+      return;
 
-        setAddresses(updatedAddresses);
-        syncDefaultAddressToLocalStorage(updatedAddresses);
-      } catch (error) {
-        console.error("Delete location error:", error);
-        alert("เกิดข้อผิดพลาด ไม่สามารถลบข้อมูลออกจากระบบได้");
+    try {
+      await deleteLocationFromDB(id); // ส่ง userId ไปด้วยตามที่แก้ api_location ไว้
+
+      const newAddresses = addresses.filter((addr) => addr.id !== id);
+      setAddresses(newAddresses);
+
+      if (newAddresses.length > 0) {
+        // ถ้าลบตัว Default ไป ให้ตั้งตัวแรกที่เหลือเป็น Default แทน
+        const firstAddress = newAddresses[0];
+        if (!newAddresses.some((a) => a.isDefault)) {
+          handleSetDefault(firstAddress);
+        } else {
+          const defaultAddress = newAddresses.find((a) => a.isDefault);
+          localStorage.setItem("userAddresses", JSON.stringify(defaultAddress));
+        }
+      } else {
+        localStorage.removeItem("userAddresses");
       }
+    } catch (error) {
+      console.error("Error deleting address:", error);
     }
   };
 
-  const handleSetDefault = (id: string) => {
-    const updatedAddresses = addresses.map((addr) => ({
-      ...addr,
-      isDefault: addr.id === id,
-    }));
-    setAddresses(updatedAddresses);
-    syncDefaultAddressToLocalStorage(updatedAddresses);
+  const handleSelectAddress = (address: AddressItem) => {
+    navigate("/orders/payment", { state: { selectedAddress: address } });
   };
 
-  const handleSelectAddress = (addr: AddressItem) => {
-    handleSetDefault(addr.id);
-    setTimeout(() => {
-      navigate("/orders/payment");
-    }, 100);
+  const resetForm = () => {
+    setEditingId(null);
+    setRecipientName("");
+    setPhoneNumber("");
+    setAddressDetails("");
+    setDeliveryNote("");
+    setLocation(null);
+    setDeliveryFee(0);
+    setDistance(0);
+    setIsMeetup(false);
+    setShowForm(false);
   };
 
   return (
-    <div className="h-full overflow-y-auto py-10 px-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <div className="flex justify-between items-center mb-8">
-          <button
-            onClick={() => navigate("/orders/payment")}
-            className="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 mb-3"
-          >
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            กลับไปหน้ารายการออเดอร์
-          </button>
-
-          {!showForm && addresses.length < 3 && (
+    <div className="h-full overflow-y-auto bg-gray-50 dark:bg-gray-900 p-4 sm:p-6">
+      <div className="max-w-3xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
             <button
-              onClick={() => handleOpenForm()}
-              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-sm transition-colors"
+              onClick={() => navigate(-1)}
+              className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm hover:bg-gray-100 transition-colors text-gray-600 dark:text-gray-300"
             >
-              + เพิ่มที่อยู่ใหม่
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+              สมุดที่อยู่ของฉัน
+            </h1>
+          </div>
+          {!showForm && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-xl transition-colors shadow-sm"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              เพิ่มที่อยู่
             </button>
           )}
         </div>
 
-        {!showForm ? (
-          <div className="space-y-4">
-            {addresses.length === 0 ? (
-              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                <p className="text-gray-500 dark:text-gray-400 mb-4">คุณยังไม่มีที่อยู่จัดส่ง</p>
-                <button
-                  onClick={() => handleOpenForm()}
-                  className="px-6 py-2 bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400 font-semibold rounded-lg hover:bg-orange-200 transition-colors"
-                >
-                  + เพิ่มที่อยู่ของคุณ
-                </button>
-              </div>
-            ) : (
-              addresses.map((addr) => (
-                <div
-                  key={addr.id}
-                  onClick={() => handleSelectAddress(addr)}
-                  className={`p-5 rounded-2xl border-2 transition-all cursor-pointer hover:shadow-lg ${
-                    addr.isDefault
-                      ? "border-orange-500 bg-orange-50/50 dark:bg-orange-900/10 shadow-md"
-                      : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm"
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-gray-800 dark:text-white">
-                        📍 {addr.isDefault ? "ที่อยู่หลัก" : "ที่อยู่จัดส่ง"}
-                      </span>
-                      {addr.isDefault && (
-                        <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full">
-                          ค่าเริ่มต้น
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleOpenForm(addr)}
-                        className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 font-semibold transition-colors"
-                      >
-                        แก้ไข
-                      </button>
-                      <button
-                        onClick={() => handleDelete(addr.id)}
-                        className="text-sm text-red-500 hover:text-red-700 font-semibold transition-colors"
-                      >
-                        ลบ
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="mb-4 text-gray-700 dark:text-gray-300">
-                    <p className="font-semibold text-gray-900 dark:text-white mb-1">
-                      👤 {addr.name} <span className="text-gray-500 font-normal">({addr.phone})</span>
-                    </p>
-                    <p className="whitespace-pre-wrap mb-2">{addr.details}</p>
-
-                    <div className="flex items-center gap-2 mt-3 mb-2">
-                      <span
-                        className={`px-2 py-1 rounded-md text-xs font-bold ${
-                          addr.isMeetup ? "bg-blue-100 text-blue-700" : addr.deliveryFee === 0 ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                        }`}
-                      >
-                        {addr.isMeetup ? "🤝 นัดรับสินค้า" : "🛵 บริการจัดส่ง"}
-                      </span>
-                      <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">
-                        {addr.deliveryFee === 0 ? "ส่งฟรี" : `ค่าบริการ ${addr.deliveryFee || 0} บาท`}
-                        <span className="text-gray-400 font-normal ml-1">({(addr.distance || 0).toFixed(1)} กม.)</span>
-                      </span>
-                    </div>
-
-                    {addr.note && (
-                      <p className="text-sm text-orange-600 dark:text-orange-400 mt-2 font-medium bg-orange-100 dark:bg-orange-900/20 p-2 rounded-lg inline-block">
-                        📌 จุดสังเกต: {addr.note}
-                      </p>
-                    )}
-                  </div>
-
-                  {!addr.isDefault && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSetDefault(addr.id);
-                      }}
-                      className="text-sm px-3 py-1.5 border border-orange-500 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30 font-semibold rounded-lg transition-colors"
-                    >
-                      ตั้งเป็นที่อยู่หลัก
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-            
-            {addresses.length >= 3 && (
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
-                * คุณได้เพิ่มที่อยู่ครบจำนวนสูงสุด (3 แห่ง) แล้ว
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl shadow-md border border-gray-100 dark:border-gray-700">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6">
-              {editingId ? "แก้ไขที่อยู่" : "เพิ่มที่อยู่ใหม่"}
+        {showForm ? (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 mb-6 animate-fadeIn">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+              {editingId ? "✏️ แก้ไขที่อยู่" : "📍 เพิ่มที่อยู่ใหม่"}
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="mb-6 bg-orange-50 dark:bg-gray-700/50 p-4 rounded-xl border border-orange-100 dark:border-gray-600">
+              <label className="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">
+                รูปแบบการรับสินค้า
+              </label>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={!isMeetup}
+                    onChange={() => handleMeetupChange(false)}
+                    className="w-5 h-5 text-orange-500 focus:ring-orange-500 cursor-pointer"
+                  />
+                  <span className="text-gray-800 dark:text-gray-200 font-medium">
+                    จัดส่งตามที่อยู่ 🛵
+                  </span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={isMeetup}
+                    onChange={() => handleMeetupChange(true)}
+                    className="w-5 h-5 text-orange-500 focus:ring-orange-500 cursor-pointer"
+                  />
+                  <span className="text-gray-800 dark:text-gray-200 font-medium">
+                    นัดรับนอกสถานที่ 🤝
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">ชื่อ-นามสกุล ผู้รับ</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  ชื่อลูกค้า (ใส่ชื่อเล่นก็ได้){" "}
+                  <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
+                  placeholder="เช่น สมชาย ใจดี"
                   value={recipientName}
                   onChange={(e) => setRecipientName(e.target.value)}
-                  placeholder="เช่น สมชาย ใจดี"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">เบอร์โทรศัพท์ติดต่อ</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  เบอร์โทรศัพท์ <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="tel"
-                  maxLength={10}
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9]/g, ""))}
                   placeholder="เช่น 0812345678"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
                 />
               </div>
             </div>
 
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">รายละเอียดที่อยู่</label>
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                รายละเอียดที่อยู่ <span className="text-red-500">*</span>
+              </label>
               <textarea
-                rows={3}
+                placeholder={
+                  isMeetup
+                    ? "สถานที่นัดรับ เช่น หน้าโรงเรียน, ปากซอย..."
+                    : "บ้านเลขที่, หมู่บ้าน, ซอย, ถนน..."
+                }
                 value={addressDetails}
                 onChange={(e) => setAddressDetails(e.target.value)}
-                placeholder="เช่น 123/45 ซ.สุขุมวิท 1 ถ.สุขุมวิท..."
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all resize-none"
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all resize-none"
               />
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">คำอธิบายจุดสังเกตในการจัดส่ง (ตัวเลือก)</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                จุดสังเกต (ไม่บังคับ)
+              </label>
               <input
                 type="text"
+                placeholder="เช่น รั้วสีฟ้า, ตรงข้ามร้านสะดวกซื้อ"
                 value={deliveryNote}
                 onChange={(e) => setDeliveryNote(e.target.value)}
-                placeholder="เช่น บ้านรั้วสีฟ้า, ฝากไว้ที่ตึกนิติบุคคล..."
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
               />
             </div>
 
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">พิกัดจัดส่ง (บนแผนที่)</label>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-700/50">
-                <div className="flex-1">
+            <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-600">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h3 className="font-bold text-gray-800 dark:text-white mb-1">
+                    พิกัดบนแผนที่ <span className="text-red-500">*</span>
+                  </h3>
                   {location ? (
                     <div>
-                      <p className="text-green-600 dark:text-green-400 font-semibold flex items-center gap-2">
-                        <span>✅ ปักหมุดเรียบร้อยแล้ว</span>
+                      <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                        ✅ ปักหมุดเรียบร้อย
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        ระยะทางจัดส่ง: {(distance || 0).toFixed(1)} กม. | {isMeetup ? "🤝 นัดรับสินค้า" : deliveryFee === 0 ? "🎉 ส่งฟรี" : `💰 ค่าจัดส่ง ${deliveryFee || 0} บาท`}
+                        ระยะทาง: {distance.toFixed(1)} กม. |{" "}
+                        {isMeetup
+                          ? "นัดรับนอกสถานที่"
+                          : `ค่าส่ง: ฿${deliveryFee}`}
                       </p>
                     </div>
                   ) : (
-                    <p className="text-orange-500 font-medium">📍 ยังไม่ได้เลือกพิกัดจัดส่ง</p>
+                    <p className="text-sm text-red-500 dark:text-red-400">
+                      ❌ ยังไม่ได้เลือกพิกัด
+                    </p>
                   )}
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowMap(true)}
-                  className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg text-sm font-semibold transition-colors"
+                  className="w-full sm:w-auto px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
                 >
-                  {location ? "แก้ไขหมุดแผนที่" : "เปิดแผนที่เพื่อปักหมุด"}
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                  {location ? "เปลี่ยนพิกัด" : "เปิดแผนที่เพื่อปักหมุด"}
                 </button>
               </div>
             </div>
 
-            <div className="mb-8">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isDefault}
-                  onChange={(e) => setIsDefault(e.target.checked)}
-                  disabled={addresses.length === 0}
-                  className="w-5 h-5 text-orange-500 rounded focus:ring-orange-500 border-gray-300 dark:border-gray-600"
-                />
-                <span className="text-gray-800 dark:text-gray-200 font-medium">ตั้งเป็นที่อยู่หลักสำหรับการจัดส่ง</span>
-              </label>
-            </div>
-
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
-                onClick={() => setShowForm(false)}
-                className="flex-1 py-4 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-bold text-lg rounded-xl transition-colors"
+                type="button"
+                onClick={resetForm}
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-xl font-bold transition-colors"
               >
                 ยกเลิก
               </button>
               <button
-                onClick={handleSave}
-                className="flex-1 py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
+                type="button"
+                onClick={handleSaveAddress}
+                className="flex-[2] py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold shadow-sm transition-colors"
               >
                 บันทึกที่อยู่
               </button>
             </div>
           </div>
+        ) : (
+          <div className="space-y-4">
+            {addresses.length === 0 ? (
+              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
+                <svg
+                  className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                  />
+                </svg>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">
+                  ยังไม่มีที่อยู่ที่บันทึกไว้
+                </p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                  กด "เพิ่มที่อยู่" เพื่อบันทึกที่อยู่จัดส่งของคุณ
+                </p>
+              </div>
+            ) : (
+              addresses.map((address) => (
+                <div
+                  key={address.id}
+                  onClick={() => handleSelectAddress(address)}
+                  className={`bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border ${address.isDefault ? "border-orange-400 dark:border-orange-500 ring-1 ring-orange-400 dark:ring-orange-500" : "border-gray-100 dark:border-gray-700"} flex flex-col sm:flex-row gap-4 justify-between items-start`}
+                >
+                  <div className="flex-1 w-full">
+                    <div className="flex items-center flex-wrap gap-2 mb-2">
+                      <h3 className="font-bold text-gray-900 dark:text-white text-lg">
+                        {address.name}
+                      </h3>
+                      <span className="text-gray-500 dark:text-gray-400 text-sm">
+                        ({address.phone})
+                      </span>
+                      {address.isDefault && (
+                        <span className="px-2 py-0.5 bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400 text-xs font-bold rounded-md flex items-center gap-1">
+                          <span>🌟</span> เริ่มต้น
+                        </span>
+                      )}
+                      {address.isMeetup && (
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-bold rounded-md">
+                          นัดรับ
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-gray-700 dark:text-gray-300 mb-1">
+                      {address.details}
+                    </p>
+                    {address.note && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                        จุดสังเกต: {address.note}
+                      </p>
+                    )}
+
+                    {address.location && (
+                      <div className="inline-flex items-center gap-1 mt-2 px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg text-xs font-medium">
+                        <svg
+                          className="w-3 h-3"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        ระยะทาง: {address.distance?.toFixed(1)} กม.
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex sm:flex-col gap-2 w-full sm:w-auto mt-2 sm:mt-0 border-t sm:border-t-0 border-gray-100 dark:border-gray-700 pt-3 sm:pt-0">
+                    {/* 🌟 ปุ่มตั้งเป็นค่าเริ่มต้น */}
+                    {!address.isDefault && (
+                      <button
+                        onClick={() => handleSetDefault(address)}
+                        className="flex-1 sm:flex-none px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-600 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-orange-400 rounded-xl font-medium transition-colors text-sm"
+                      >
+                        ตั้งเป็นเริ่มต้น
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleEdit(address)}
+                      className="flex-1 sm:flex-none px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-blue-400 rounded-xl font-medium transition-colors text-sm"
+                    >
+                      แก้ไข
+                    </button>
+                    <button
+                      onClick={() => handleDelete(address.id)}
+                      className="flex-1 sm:flex-none px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-red-400 rounded-xl font-medium transition-colors text-sm"
+                    >
+                      ลบ
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         )}
       </div>
 
       {showMap && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 transition-opacity">
-          <div className="relative w-full max-w-5xl h-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-fadeIn">
-            <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 z-10">
-              <h3 className="text-lg md:text-xl font-bold text-gray-800 dark:text-white">📍 เลือกพิกัดจัดส่งของคุณ</h3>
-              <button
-                onClick={() => setShowMap(false)}
-                className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-full transition-colors"
+        <div className="fixed inset-0 z-[100] bg-white dark:bg-gray-800 flex flex-col animate-fadeIn">
+          <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 shadow-sm z-10 bg-white dark:bg-gray-800">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-orange-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 relative w-full h-full">
-              <SelectMaps
-                onLocationConfirm={(lat, lng, fee, dist, meetup) => {
-                  setLocation({ lat, lng });
-                  setDeliveryFee(fee);
-                  setDistance(dist);
-                  setIsMeetup(meetup);
-                  setShowMap(false);
-                }}
-              />
-            </div>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+              เลือกพิกัด{isMeetup ? "นัดรับ" : "จัดส่ง"}
+            </h3>
+            <button
+              onClick={() => setShowMap(false)}
+              className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full transition-colors"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <div className="flex-1 w-full relative">
+            <SelectMaps
+              isMeetup={isMeetup}
+              onLocationConfirm={(lat, lng, fee, dist, meetup) => {
+                setLocation({ lat, lng });
+                setDeliveryFee(fee);
+                setDistance(dist);
+                setIsMeetup(meetup);
+                setShowMap(false);
+              }}
+            />
           </div>
         </div>
       )}

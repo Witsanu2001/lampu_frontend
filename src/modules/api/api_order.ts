@@ -230,22 +230,15 @@ export async function getDeliveryOrders(page: number = 1, limit: number = 10): P
   if (!response.ok || !json.success) throw new Error(json.message);
   return json.data;
 }
- 
-export interface OrderSummary {
-  order_id: string;
-  status: string;
-  recipient: string;
-  address: string;
-  grand_total: number;
-  created_at: string;
-}
 
 
-export async function getSuccessOrders(selectedDate: string): Promise<OrderSummary[]> {
+
+// 🌟 แก้ page และ limit ให้เป็น number
+export async function getSuccessOrders(selectedDate: string, page: number, limit: number): Promise<any[]> {
   const token = await getFreshToken();
   if (!token) throw new Error("ไม่พบ Token ยืนยันตัวตน");
 
-  const response = await fetch(`${apiUrl}/api/orders/orders_get/success?date=${selectedDate}`, {
+  const response = await fetch(`${apiUrl}/api/orders/orders_get/success?date=${selectedDate}&page=${page}&limit=${limit}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",

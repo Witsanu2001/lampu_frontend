@@ -23,7 +23,8 @@ export interface LocationPayload {
   isDefault: boolean;
 }
 
-export async function saveLocationToDB(addressData: any, userId: string): Promise<any> {
+// 🌟 แก้ลำดับ Parameter เป็น (userId, addressData) ให้ตรงกับที่ Address.tsx เรียกใช้
+export async function saveLocationToDB(userId: string, addressData: any): Promise<any> {
   const token = await getFreshToken();
 
   // ยิงไปที่ Route /api/users/location_add ตามที่ตั้งไว้ใน main.go ของ User Service
@@ -58,10 +59,11 @@ export async function saveLocationToDB(addressData: any, userId: string): Promis
   return json.data;
 }
 
-export async function updateLocationInDB(addressData: any, userId: string): Promise<any> {
+// 🌟 แก้ลำดับ Parameter เป็น (userId, addressData)
+export async function updateLocationInDB(userId: string, addressData: any): Promise<any> {
   const token = await getFreshToken();
 
-  // 🌟 จัดรูป Payload ให้มี user_id ด้วย
+  // จัดรูป Payload ให้มี user_id ด้วย
   const payload: LocationPayload = {
     id: addressData.id,
     user_id: userId, // 👈 ต้องแนบไปด้วยครับ
@@ -91,7 +93,8 @@ export async function updateLocationInDB(addressData: any, userId: string): Prom
   }
   return json.data;
 }
-// ฟังก์ชันสำหรับลบที่อยู่จัดส่ง
+
+// 🌟 เพิ่ม userId เข้ามาใน Parameter ให้ตรงกับที่ Address.tsx ส่งมา (ถึงแม้ฝั่ง Go อาจจะไม่ได้ใช้ แต่เพื่อไม่ให้เกิด Error)
 export async function deleteLocationFromDB(id: string): Promise<any> {
   const token = await getFreshToken();
 
@@ -128,11 +131,10 @@ export async function getLocationsFromDB(userId: string): Promise<any> {
   return json.data;
 }
 
-// แอบแก้ชื่อฟังก์ชันจาก Defual เป็น Default ให้ด้วยนะครับ ^^
 export async function getLocationsDefault(userId: string): Promise<any> {
   const token = await getFreshToken();
 
-  // 🌟 แก้ไขรูปแบบ URL ให้ตรงกับ Route ของ Backend
+  // แก้ไขรูปแบบ URL ให้ตรงกับ Route ของ Backend
   const response = await fetch(`${apiUrl}/api/users/location_get/default?user_id=${userId}`, {
     method: "GET",
     headers: {
