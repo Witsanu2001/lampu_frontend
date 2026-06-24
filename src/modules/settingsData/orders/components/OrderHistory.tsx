@@ -56,7 +56,6 @@ export default function OrderHistory() {
         setIsLoading(false);
       }
     };
-
     fetchOrders();
   }, [selectedDate, currentPage, rowsPerPage]);
 
