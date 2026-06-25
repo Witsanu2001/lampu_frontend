@@ -260,11 +260,10 @@ export default function OrderList() {
       } catch (err) {
         if (isMounted) {
           console.error("Fetch orders error:", err);
-          // 🌟 แก้ไขตรงนี้: แทนที่จะโยน Error ให้เซ็ตเป็นหน้าว่างแทน
           if (page === 1) {
-            setOrders([]); // เพื่อให้ไปเข้าเงื่อนไขแสดง "ไม่มีออเดอร์ในหมวดหมู่นี้"
+            setOrders([]);
           }
-          setError(null); // ไม่ต้องเซ็ตคำว่า Failed to load orders
+          setError(null);
           setHasMore(false);
           setIsInitialLoading(false);
           setIsTabLoading(false);
@@ -489,7 +488,7 @@ export default function OrderList() {
           <>
             {orders.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500">
-                <span className="text-6xl mb-4 opacity-50">📂</span>
+                <span className="text-6xl mb-4 opacity-50">🛎️</span>
                 <p className="text-lg font-medium">ไม่มีออเดอร์ในหมวดหมู่นี้</p>
               </div>
             ) : (
@@ -591,7 +590,6 @@ export default function OrderList() {
                       </div>
                     </div>
 
-                    {/* ข้อมูล Rider แสดงแบบแถบเล็กกระทัดรัด */}
                     {activeTab === "delivery" &&
                       order.rider_id &&
                       order.rider_id !== "" && (
@@ -610,24 +608,45 @@ export default function OrderList() {
                         </div>
                       )}
 
-                    {/* รายการอาหารหลัก (ซ่อนราคาและซ่อน Add-on) */}
-                    <div className="px-4 py-2 space-y-1 bg-gray-50/30 dark:bg-gray-800/30">
-                      {order.mainItems?.map((item, index) => (
-                        <div
-                          key={index}
-                          className="flex justify-between items-center text-[13px]"
-                        >
-                          <span className="text-gray-700 dark:text-gray-300 truncate pr-2">
-                            {item.name}
-                            <span className="text-emerald-600 dark:text-emerald-400 ml-1.5 font-bold">
-                              x{item.quantity}
+                    <div className="flex px-4 py-2 space-y-1 bg-gray-50/30 dark:bg-gray-800/30 justify-between">
+                      <div className="flex-1 flex flex-col space-y-0.5">
+                        <p className="text-[12px] text-gray-500 font-bold">
+                          ชุดหมูกระทะ
+                        </p>
+                        {order.mainItems?.map((item, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center text-[13px]"
+                          >
+                            <span className="text-gray-700 dark:text-gray-300 truncate">
+                              {item.name}
+                              <span className="text-emerald-600 dark:text-emerald-400 ml-1.5 font-bold">
+                                x{item.quantity}
+                              </span>
                             </span>
-                          </span>
-                        </div>
-                      ))}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex-1 flex flex-col space-y-0.5 text-right">
+                        <p className="text-[12px] text-gray-500 font-bold">
+                          เมนูเพิ่มเติม
+                        </p>
+                        {order.addOnItems?.map((item, index) => (
+                          <div
+                            key={index}
+                            className="flex justify-end items-center text-[13px]"
+                          >
+                            <span className="text-gray-700 dark:text-gray-300 truncate">
+                              {item.name}
+                              <span className="text-emerald-600 dark:text-emerald-400 ml-1.5 font-bold">
+                                x{item.quantity}
+                              </span>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
-                    {/* Footer (ที่อยู่ + สถานะอุปกรณ์ & ช่องทางชำระเงิน) */}
                     <div className="px-4 py-3 bg-white dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700/50 flex flex-col gap-2">
                       <div className="flex items-start justify-between gap-2 text-[11px] text-gray-500 dark:text-gray-400">
                         <div className="flex items-start gap-1.5 flex-1">
@@ -639,14 +658,18 @@ export default function OrderList() {
                           </span>
                         </div>
 
-                        {order.equipment?.needEquipment && (
-                          <span className="shrink-0 bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400 px-2 py-0.5 rounded-md font-semibold border border-orange-100 dark:border-orange-800/30">
+                        {order.equipment?.needEquipment ? (
+                          <span className="px-2 bg-white/20 backdrop-blur-md border border-white/30 text-white font-bold rounded-md active:scale-95 transition-all flex items-center justify-center gap-2">
                             รับเตากระทะ{" "}
                             {Math.max(
-                              order.equipment.stoveCount || 1,
-                              order.equipment.panCount || 1,
+                              order.equipment.stoveCount || 0,
+                              order.equipment.panCount || 0,
                             )}{" "}
-                            ชุด + ถ่าน {order.equipment.charcoalCount} ถุง
+                            ชุด + ถ่าน {order.equipment.charcoalCount || 0} ถุง
+                          </span>
+                        ) : (
+                          <span className="px-2 bg-red-200 backdrop-blur-md border border-red/30 text-red-600 font-bold rounded-md active:scale-95 transition-all flex items-center justify-center gap-2">
+                            ไม่รับเตากระทะ
                           </span>
                         )}
                       </div>

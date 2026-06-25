@@ -86,7 +86,7 @@ export default function Header({ user, setUser }: HeaderProps) {
 
   return (
     <>
-      <header className="flex w-full px-6 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 justify-between items-center transition-colors duration-200 z-20">
+      <header className="sticky top-0 z-50 bg-blue-50 dark:bg-blue-900/20 shadow-sm px-4 py-3 flex justify-between items-center border-b border-blue-100 dark:border-blue-800 transition-colors duration-300">
         <div className="flex items-center gap-2">
           <img
             src={LOGO_URL}

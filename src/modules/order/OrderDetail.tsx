@@ -240,7 +240,7 @@ export default function OrderDetail() {
           <p className="text-red-500">{error || "Order not found"}</p>
           <button
             onClick={() => navigate("/orders")}
-            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
           >
             กลับไปหน้ารายการออเดอร์
           </button>
@@ -308,7 +308,7 @@ export default function OrderDetail() {
         <div className="flex justify-between items-center">
           <button
             onClick={() => navigate("/orders")}
-            className="flex items-center text-2xl text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 mb-3"
+            className="flex items-center text-2xl text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 mb-3"
           >
             <svg
               className="w-6 h-6 mt-1"
@@ -377,7 +377,7 @@ export default function OrderDetail() {
       <div className="space-y-4">
         {/* Main Items */}
         <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
-          <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">
+          <h2 className="font-semibold mb-3 text-emerald-600 dark:text-emerald-400">
             รายการหลัก
           </h2>
           <div className="space-y-2">
@@ -403,7 +403,7 @@ export default function OrderDetail() {
         {/* Add-on Items */}
         {order.addOnItems?.length > 0 && (
           <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
-            <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">
+            <h2 className="font-semibold mb-3 text-emerald-600 dark:text-emerald-400">
               รายการเพิ่มเติม
             </h2>
             <div className="space-y-2">
@@ -429,7 +429,7 @@ export default function OrderDetail() {
 
         {order.equipment?.needEquipment ? (
           <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
-            <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">
+            <h2 className="font-semibold mb-3 text-emerald-600 dark:text-emerald-400">
               อุปกรณ์
             </h2>
             <div className="grid grid-cols-2 gap-2 text-sm">
@@ -474,7 +474,7 @@ export default function OrderDetail() {
         {/* Shipping */}
         <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
           <div className="flex justify-between items-center mb-3">
-            <h2 className="font-semibold text-orange-600 dark:text-orange-400">
+            <h2 className="font-semibold text-emerald-600 dark:text-emerald-400">
               ที่อยู่จัดส่ง
             </h2>
             {order.shipping?.location?.lat && order.shipping?.location?.lng && (
@@ -513,7 +513,7 @@ export default function OrderDetail() {
 
         {/* Payment */}
         <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
-          <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">
+          <h2 className="font-semibold mb-3 text-emerald-600 dark:text-emerald-400">
             การชำระเงิน
           </h2>
           <div className="mb-3">
@@ -573,7 +573,7 @@ export default function OrderDetail() {
         {/* Home Image */}
         {order.home_image_url && (
           <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
-            <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">
+            <h2 className="font-semibold mb-3 text-emerald-600 dark:text-emerald-400">
               รูปบ้านลูกค้า
             </h2>
             <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 p-2 flex justify-center">
@@ -591,7 +591,7 @@ export default function OrderDetail() {
 
         {/* Totals */}
         <div className="bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm p-4">
-          <h2 className="font-semibold mb-3 text-orange-600 dark:text-orange-400">
+          <h2 className="font-semibold mb-3 text-emerald-600 dark:text-emerald-400">
             สรุปยอดชำระ
           </h2>
           <div className="space-y-2 text-sm">
@@ -615,7 +615,7 @@ export default function OrderDetail() {
             </div>
             <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-600">
               <span className="font-bold">ยอดรวมทั้งหมด:</span>
-              <span className="font-bold text-lg text-orange-600 dark:text-orange-400">
+              <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
                 ฿{order.totals?.grandTotal?.toLocaleString()}
               </span>
             </div>
@@ -706,10 +706,10 @@ export default function OrderDetail() {
 
               <Marker longitude={SHOP_LNG} latitude={SHOP_LAT} anchor="bottom">
                 <div className="relative flex flex-col items-center justify-center cursor-pointer hover:scale-110 transition-transform origin-bottom">
-                  <div className="bg-orange-500 rounded-full w-10 h-10 flex items-center justify-center shadow-md border-2 border-white z-10">
+                  <div className="bg-emerald-500 rounded-full w-10 h-10 flex items-center justify-center shadow-md border-2 border-white z-10">
                     <span className="text-xl">🥘</span>
                   </div>
-                  <div className="w-3 h-3 bg-orange-500 rotate-45 -mt-2 border-b-2 border-r-2 border-white shadow-sm rounded-sm"></div>
+                  <div className="w-3 h-3 bg-emerald-500 rotate-45 -mt-2 border-b-2 border-r-2 border-white shadow-sm rounded-sm"></div>
                 </div>
               </Marker>
 
@@ -865,7 +865,7 @@ export default function OrderDetail() {
       {isSubmitting && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl flex flex-col items-center shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
             <p className="mt-4 font-bold text-gray-800 dark:text-white">
               กำลังดำเนินการ...
             </p>
@@ -915,7 +915,7 @@ export default function OrderDetail() {
                 )}
                 {popup.type === "warning" && (
                   <svg
-                    className="h-10 w-10 text-orange-500"
+                    className="h-10 w-10 text-emerald-500"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -944,7 +944,7 @@ export default function OrderDetail() {
                     ? "bg-green-600 hover:bg-green-700 focus:ring-green-500"
                     : popup.type === "error"
                       ? "bg-red-600 hover:bg-red-700 focus:ring-red-500"
-                      : "bg-orange-500 hover:bg-orange-600 focus:ring-orange-500"
+                      : "bg-emerald-500 hover:bg-emerald-600 focus:ring-emerald-500"
                 }`}
               >
                 ตกลง

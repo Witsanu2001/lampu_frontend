@@ -14,6 +14,7 @@ export interface Menu {
   image_url_menu: string;
   created_at: string;
 }
+
 export async function getListMenu(): Promise<Menu[]> {
   const token = await getFreshToken();
 

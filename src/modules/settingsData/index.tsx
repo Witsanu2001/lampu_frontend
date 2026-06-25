@@ -6,9 +6,9 @@ export default function Settingsdata() {
       <div className="grid grid-cols-1 gap-4">
         <Link
           to="/settingsData/dashboards"
-          className="flex items-start bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 border-l-4 border-l-blue-500 dark:border-l-blue-500 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-green-400 dark:hover:border-green-600"
+          className="flex items-start bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-6 shadow-sm border border-blue-100 dark:border-blue-800 border-l-4 border-l-blue-500 dark:border-l-blue-500 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-green-400 dark:hover:border-green-600"
         >
-          <div className="text-4xl mr-5 bg-blue-50 text-blue-500 w-16 h-16 flex items-center justify-center rounded-xl shrink-0">
+          <div className="text-4xl mr-5 bg-blue-100/80 dark:bg-blue-400/20 text-blue-500 w-16 h-16 flex items-center justify-center rounded-xl shrink-0">
             📊
           </div>
           <div>
@@ -24,9 +24,9 @@ export default function Settingsdata() {
         {/* 2. Users Card */}
         <Link
           to="/settingsData/users"
-          className="flex items-start bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 border-l-4 border-l-blue-500 dark:border-l-blue-500 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-green-400 dark:hover:border-green-600"
+          className="flex items-start bg-blue-50  dark:bg-blue-900/20 rounded-2xl p-6 shadow-sm border border-blue-100 dark:border-blue-800 border-l-4 border-l-blue-500 dark:border-l-blue-500 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-green-400 dark:hover:border-green-600"
         >
-          <div className="text-4xl mr-5 bg-gray-50 w-16 h-16 flex items-center justify-center rounded-xl shrink-0">
+          <div className="text-4xl mr-5 bg-blue-100/80 dark:bg-blue-400/20 w-16 h-16 flex items-center justify-center rounded-xl shrink-0">
             👥
           </div>
           <div>
@@ -42,9 +42,9 @@ export default function Settingsdata() {
         {/* 3. Menu Card */}
         <Link
           to="/settingsData/menu"
-          className="flex items-start bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 border-l-4 border-l-blue-500 dark:border-l-blue-500 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-green-400 dark:hover:border-green-600"
+          className="flex items-start bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-6 shadow-sm border border-blue-100 dark:border-blue-800 border-l-4 border-l-blue-500 dark:border-l-blue-500 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-green-400 dark:hover:border-green-600"
         >
-          <div className="text-4xl mr-5 bg-gray-50 w-16 h-16 flex items-center justify-center rounded-xl shrink-0">
+          <div className="text-4xl mr-5 bg-blue-100/80 dark:bg-blue-400/20 w-16 h-16 flex items-center justify-center rounded-xl shrink-0">
             🍔
           </div>
           <div>
@@ -60,9 +60,9 @@ export default function Settingsdata() {
         {/* 4. Orders Card */}
         <Link
           to="/settingsData/orders"
-          className="flex items-start bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 border-l-4 border-l-blue-500 dark:border-l-blue-500 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-green-400 dark:hover:border-green-600"
+          className="flex items-start bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-6 shadow-sm border border-blue-100 dark:border-blue-800 border-l-4 border-l-blue-500 dark:border-l-blue-500 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-green-400 dark:hover:border-green-600"
         >
-          <div className="text-4xl mr-5 bg-gray-50 w-16 h-16 flex items-center justify-center rounded-xl shrink-0">
+          <div className="text-4xl mr-5 bg-blue-100/80 dark:bg-blue-400/20 w-16 h-16 flex items-center justify-center rounded-xl shrink-0">
             🛒
           </div>
           <div>
@@ -77,9 +77,9 @@ export default function Settingsdata() {
 
         <Link
           to="/settingsData/systems"
-          className="flex items-start bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 border-l-4 border-l-blue-500 dark:border-l-blue-500 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-green-400 dark:hover:border-green-600"
+          className="flex items-start bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-6 shadow-sm border border-blue-100 dark:border-blue-800 border-l-4 border-l-blue-500 dark:border-l-blue-500 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-green-400 dark:hover:border-green-600"
         >
-          <div className="text-4xl mr-5 bg-gray-50 w-16 h-16 flex items-center justify-center rounded-xl shrink-0">
+          <div className="text-4xl mr-5 bg-blue-100/80 dark:bg-blue-400/20 w-16 h-16 flex items-center justify-center rounded-xl shrink-0">
             ⚙️
           </div>
           <div>

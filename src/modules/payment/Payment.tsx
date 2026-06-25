@@ -17,6 +17,7 @@ import {
   DEFAULT_PAN,
   DEFAULT_STOVE,
 } from "../../shared/const/config";
+import { Loading } from "../../shared/components/Loading";
 
 export default function Payment() {
   const navigate = useNavigate();
@@ -30,6 +31,9 @@ export default function Payment() {
 
   const [shippingAddress, setShippingAddress] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // 🌟 State สำหรับคุมหน้าจอโหลดตอนเปิดเข้ามาครั้งแรก
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   // 🌟 State สำหรับแอดมินกรอกข้อมูล
   const [adminRecipient, setAdminRecipient] = useState("");
@@ -83,78 +87,81 @@ export default function Payment() {
   const closePopup = () => {
     setPopup((prev) => ({ ...prev, isOpen: false }));
   };
-  
-  useEffect(() => {
-    const fetchShippingAddress = async () => {
-      // 🌟 3. ลำดับความสำคัญ: 
-      // ถ้ามีค่าส่งมาจากหน้า Address (state) ให้ใช้ค่านั้นก่อน
-      const state = routerLocation.state as any;
-      if (state?.selectedAddress) {
-        setShippingAddress(state.selectedAddress);
-        return;
-      }
 
-      // ถ้าไม่มี state ถึงค่อยเช็ค LocalStorage หรือ API
-      const savedAddressesStr = localStorage.getItem("userAddresses");
-      if (savedAddressesStr && savedAddressesStr !== "null" && savedAddressesStr !== "[]") {
-        setShippingAddress(JSON.parse(savedAddressesStr));
-        return;
-      }
-
-      // เช็ค API ปกติ
-      const userId = currentUser?.id || currentUser?.uid;
-      if (userId) {
-        try {
-          const locationData = await getLocationsDefault(userId);
-          if (locationData) {
-            setShippingAddress(locationData);
-          }
-        } catch (error) {
-          console.error("❌ Failed to fetch default location:", error);
-        }
-      }
-    };
-
-    if (currentUser) {
-      fetchShippingAddress();
-    }
-  }, [currentUser, routerLocation.state]);
-
+  // 🌟 รวบรวมการโหลดข้อมูล (User, Address, AddOn) ไว้ใน useEffect เดียว
   useEffect(() => {
     let isMounted = true;
-    const loadMenus = async () => {
+
+    const initializeData = async () => {
+      setIsPageLoading(true);
+
       try {
-        const token = await getFreshToken();
-        const data = await getAddOnMenus(token);
-        if (isMounted) {
-          setAddOnMenus(data.filter((item: any) => item.available));
-          setIsLoadingAddOns(false);
+        const userDataString = localStorage.getItem("userData");
+        const user = userDataString ? JSON.parse(userDataString) : null;
+        if (isMounted && user) {
+          setCurrentUser(user);
         }
-      } catch (err) {
-        if (isMounted) setIsLoadingAddOns(false);
+
+        let token = "";
+        try {
+          token = await getFreshToken();
+        } catch (e) {
+          console.warn("Could not get token", e);
+        }
+
+        const [addons, defaultLocation] = await Promise.all([
+          token ? getAddOnMenus(token).catch(() => []) : Promise.resolve([]),
+          (async () => {
+            const state = routerLocation.state as any;
+            if (state?.selectedAddress) return state.selectedAddress;
+
+            const savedAddressesStr = localStorage.getItem("userAddresses");
+            if (
+              savedAddressesStr &&
+              savedAddressesStr !== "null" &&
+              savedAddressesStr !== "[]"
+            ) {
+              const parsed = JSON.parse(savedAddressesStr);
+              return Array.isArray(parsed) && parsed.length > 0
+                ? parsed[0]
+                : parsed;
+            }
+
+            const userId = user?.id || user?.uid;
+            if (userId) {
+              try {
+                return await getLocationsDefault(userId);
+              } catch (err) {
+                return null;
+              }
+            }
+            return null;
+          })(),
+        ]);
+
+        if (isMounted) {
+          setAddOnMenus(addons.filter((item: any) => item.available));
+          setIsLoadingAddOns(false);
+
+          if (defaultLocation) {
+            setShippingAddress(defaultLocation);
+          }
+        }
+      } catch (error) {
+        console.error("Error initializing payment page:", error);
+      } finally {
+        if (isMounted) {
+          setIsPageLoading(false); // ปิดหน้าจอโหลดเมื่อเสร็จสิ้น
+        }
       }
     };
-    loadMenus();
+
+    initializeData();
+
     return () => {
       isMounted = false;
     };
-  }, []);
-
-  useEffect(() => {
-    const userDataString = localStorage.getItem("userData");
-    if (userDataString) {
-      setCurrentUser(JSON.parse(userDataString));
-    }
-    const savedAddress = localStorage.getItem("userAddresses");
-    if (savedAddress) {
-      const parsedAddress = JSON.parse(savedAddress);
-      setShippingAddress(
-        Array.isArray(parsedAddress) && parsedAddress.length > 0
-          ? parsedAddress[0]
-          : parsedAddress,
-      );
-    }
-  }, []);
+  }, [routerLocation.state]);
 
   const isAdmin = currentUser?.role === "admin";
   const [paymentMethod, setPaymentMethod] = useState("");
@@ -314,16 +321,17 @@ export default function Payment() {
     );
   };
 
-const deliveryFeePerSet = isAdmin
-  ? (applyDeliveryFee
-      ? (isMeetup 
-          ? DEFAULT_MEET_UP_FEE 
-          : (deliveryFee > 0 ? deliveryFee : DEFAULT_DELIVERY_FEE) // 🌟 ถ้าค่าส่งเป็น 0 ให้ใช้ค่าเริ่มต้นแทน
-        )
-      : 0) // ถ้าไม่ติ๊กคิดเงิน ให้เป็น 0
-  : (isMeetup 
-      ? DEFAULT_MEET_UP_FEE 
-      : (shippingAddress?.deliveryFee || shippingAddress?.fee || 0));
+  const deliveryFeePerSet = isAdmin
+    ? applyDeliveryFee
+      ? isMeetup
+        ? DEFAULT_MEET_UP_FEE
+        : deliveryFee > 0
+          ? deliveryFee
+          : DEFAULT_DELIVERY_FEE // 🌟 ถ้าค่าส่งเป็น 0 ให้ใช้ค่าเริ่มต้นแทน
+      : 0 // ถ้าไม่ติ๊กคิดเงิน ให้เป็น 0
+    : isMeetup
+      ? DEFAULT_MEET_UP_FEE
+      : shippingAddress?.deliveryFee || shippingAddress?.fee || 0;
 
   const shippingFee = mainItemsCount * deliveryFeePerSet;
 
@@ -487,13 +495,12 @@ const deliveryFeePerSet = isAdmin
       setSlipFile(null);
       setHomeImageFile(null);
 
-      // แสดงหน้าต่างสำเร็จ
       showPopup(
         "success",
         "สั่งซื้อสำเร็จ!",
         "ยืนยันการสั่งซื้อสำเร็จ! ขอบคุณที่ใช้บริการครับ/ค่ะ 🥢",
         () => {
-          navigate("/"); // พากลับหน้าหลักเมื่อกดปิด
+          navigate("/");
         },
       );
     } catch (error: any) {
@@ -522,10 +529,11 @@ const deliveryFeePerSet = isAdmin
   };
 
   return (
-    <div className="h-full overflow-y-auto py-10 px-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      {/* Modal ของ SelectMaps */}
+    <div className="h-full overflow-y-auto py-10 px-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-200 relative">
+      {isPageLoading && <Loading message={"กำลังเตรียมข้อมูลคำสั่งซื้อ..."} />}
+
       {showMap && (
-        <div className="fixed inset-0 z-50 bg-white">
+        <div className="fixed inset-0 z-[110] bg-white">
           <SelectMaps
             isMeetup={isMeetup}
             onLocationConfirm={(lat, lng, fee, dist, meetup) => {
@@ -539,7 +547,7 @@ const deliveryFeePerSet = isAdmin
           />
           <button
             onClick={() => setShowMap(false)}
-            className="absolute top-4 right-4 bg-white px-4 py-2 rounded-full shadow-lg font-bold text-red-500 z-[60] flex items-center gap-1 hover:bg-gray-100"
+            className="absolute top-4 right-4 bg-white px-4 py-2 rounded-full shadow-lg font-bold text-red-500 z-[120] flex items-center gap-1 hover:bg-gray-100"
           >
             ❌
           </button>
@@ -589,7 +597,6 @@ const deliveryFeePerSet = isAdmin
 
               {isAdmin ? (
                 <div className="space-y-4">
-                  {/* 🌟 เพิ่มตัวเลือกรูปแบบการรับสินค้า (จัดส่ง / นัดรับ) สำหรับ Admin */}
                   <div className="bg-orange-50 dark:bg-gray-700/50 p-4 rounded-xl border border-orange-100 dark:border-gray-600">
                     <label className="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">
                       รูปแบบการรับสินค้า
@@ -680,7 +687,6 @@ const deliveryFeePerSet = isAdmin
                         onChange={(e) => setApplyDeliveryFee(e.target.checked)}
                         className="w-5 h-5 text-blue-500 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
                       />
-                      {/* เปลี่ยนข้อความตรงนี้ครับ */}
                       <span className="font-bold text-gray-800 dark:text-white">
                         เปิดระบบคำนวณค่าจัดส่ง (ติ๊กเพื่อคิดเงิน / ไม่ติ๊ก =
                         ส่งฟรี)
@@ -688,13 +694,20 @@ const deliveryFeePerSet = isAdmin
                     </label>
 
                     <div
-                      className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 border rounded-xl transition-all ${applyDeliveryFee ? "border-blue-300 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/50"}`}
+                      className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 border rounded-xl transition-all ${
+                        applyDeliveryFee
+                          ? "border-blue-300 bg-blue-50 dark:bg-blue-900/20"
+                          : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/50"
+                      }`}
                     >
                       <div className="flex-1">
                         {location ? (
                           <div>
                             <p className="text-green-600 dark:text-green-400 font-semibold flex items-center gap-2">
-                              <span>✅ ปักหมุดระยะทางเรียบร้อย ระยะ {distance.toFixed(1)} กม.</span>
+                              <span>
+                                ✅ ปักหมุดระยะทางเรียบร้อย ระยะ{" "}
+                                {distance.toFixed(1)} กม.
+                              </span>
                             </p>
                             <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
                               {isMeetup ? (
@@ -729,7 +742,11 @@ const deliveryFeePerSet = isAdmin
                             </p>
                             <p className="text-sm">
                               <span
-                                className={`font-bold px-2 py-1 rounded-md inline-block ${applyDeliveryFee ? "text-orange-600 bg-orange-100 dark:bg-orange-900/30" : "text-gray-400 bg-gray-200 dark:bg-gray-600 line-through"}`}
+                                className={`font-bold px-2 py-1 rounded-md inline-block ${
+                                  applyDeliveryFee
+                                    ? "text-orange-600 bg-orange-100 dark:bg-orange-900/30"
+                                    : "text-gray-400 bg-gray-200 dark:bg-gray-600 line-through"
+                                }`}
                               >
                                 💰 ค่าจัดส่ง {deliveryFee} บาท
                               </span>
@@ -1250,7 +1267,15 @@ const deliveryFeePerSet = isAdmin
               </h2>
               <div className="space-y-4">
                 <label
-                  className={`flex items-center gap-3 p-4 border rounded-xl ${isAdmin ? "bg-gray-50 dark:bg-gray-700/50 cursor-not-allowed" : "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50"} transition-colors ${paymentMethod === "เก็บเงินปลายทาง" ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" : "border-gray-200 dark:border-gray-700"}`}
+                  className={`flex items-center gap-3 p-4 border rounded-xl ${
+                    isAdmin
+                      ? "bg-gray-50 dark:bg-gray-700/50 cursor-not-allowed"
+                      : "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  } transition-colors ${
+                    paymentMethod === "เก็บเงินปลายทาง"
+                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10"
+                      : "border-gray-200 dark:border-gray-700"
+                  }`}
                 >
                   <input
                     type="radio"
@@ -1275,7 +1300,11 @@ const deliveryFeePerSet = isAdmin
                 {!isAdmin && (
                   <>
                     <label
-                      className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === "promptpay" ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
+                      className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${
+                        paymentMethod === "promptpay"
+                          ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10"
+                          : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                      }`}
                     >
                       <input
                         type="radio"
@@ -1416,27 +1445,12 @@ const deliveryFeePerSet = isAdmin
         )}
       </div>
 
-      {/* ✨ Overlay Loading */}
-      {isSubmitting && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl flex flex-col items-center shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 font-bold text-gray-800 dark:text-white">
-              กำลังดำเนินการ...
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              กรุณารอสักครู่
-            </p>
-          </div>
-        </div>
-      )}
+      {isSubmitting && <Loading message={"กำลังดำเนินการ..."} />}
 
-      {/* ✨ Custom Popup Modal */}
       {popup.isOpen && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200 text-center">
             <div className="p-6">
-              {/* Icon */}
               <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-700 mb-4">
                 {popup.type === "success" && (
                   <svg
@@ -1507,9 +1521,10 @@ const deliveryFeePerSet = isAdmin
                 {popup.message}
               </p>
 
-              {/* ปุ่มกด */}
               <div
-                className={`mt-6 flex gap-3 ${popup.type === "confirm" ? "flex-row" : "flex-col"}`}
+                className={`mt-6 flex gap-3 ${
+                  popup.type === "confirm" ? "flex-row" : "flex-col"
+                }`}
               >
                 {popup.type === "confirm" ? (
                   <>

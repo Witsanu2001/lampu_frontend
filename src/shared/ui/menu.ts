@@ -2,9 +2,9 @@
 
 import Home from "../../assets/home.png";
 import Order from "../../assets/orderCheck.png";
-import List from "../../assets/list.png";
+import Task from "../../assets/task.png";
 import UserSetting from "../../assets/user-setting.png";
-import ShoppingList from "../../assets/shopping_list.png";
+import Checklist from "../../assets/checklist.png";
 
 export interface MenuItem {
   label: string;
@@ -25,7 +25,7 @@ export const menuConfig: MenuItem[] = [
     label: "ออเดอร์",
     to: "/orders",
     roles: ["admin"],
-    iconUrl: ShoppingList,
+    iconUrl: Checklist,
   },
   {
     label: "ออเดอร์",
@@ -37,7 +37,7 @@ export const menuConfig: MenuItem[] = [
     label: "ตั้งค่า",
     to: "/listData",
     roles: ["user"],
-    iconUrl: List,
+    iconUrl: Task,
   },
   {
     label: "จัดการระบบ",

@@ -23,40 +23,26 @@ export default function Home() {
     let isMounted = true;
 
     const fetchMainMenus = async () => {
-      let retries = 0;
-      const maxRetries = 3;
+      setIsLoading(true);
+      try {
+        const token = localStorage.getItem("auth_token");
+        if (!token) throw new Error("No token found");
+        const data = await getListMenu();
 
-      while (retries < maxRetries) {
-        try {
-          // เช็ค Token
-          const token = localStorage.getItem("auth_token");
-          if (!token) {
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            retries++;
-            continue;
-          }
-
-          const data = await getListMenu();
-          
-          if (isMounted) {
-            setMooKrataMenus(data.filter((item: any) => item.available));
-            setIsLoading(false);
-            return; 
-          }
-        } catch (error) {
-          console.error("Error fetching menus:", error);
-          retries++;
-          if (retries >= maxRetries) {
-            if (isMounted) setIsLoading(false);
-          } else {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-          }
+        if (isMounted) {
+          setMooKrataMenus(data.filter((item: any) => item.available));
         }
+      } catch (error) {
+        console.error("Error fetching menus:", error);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     };
 
     fetchMainMenus();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleAddToCart = (
@@ -108,7 +94,7 @@ export default function Home() {
       <div className="flex flex-col items-center justify-center py-20 space-y-4">
         <div className="w-14 h-14 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin"></div>
         <p className="text-gray-500 dark:text-gray-400 font-medium text-lg animate-pulse">
-           กำลังเตรียมเมนูความอร่อย...
+          กำลังเตรียมเมนูความอร่อย...
         </p>
       </div>
     );

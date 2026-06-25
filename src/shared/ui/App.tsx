@@ -353,7 +353,7 @@ export default function App() {
         )}
 
         <main
-          className={`flex-1 overflow-y-auto ${isPaymentPage ? "pb-0" : "pb-[80px]"} md:pb-0 scroll-smooth`}
+          className={`flex-1 overflow-y-auto ${isPaymentPage ? "pb-0" : "pb-[64px] md:pb-15"} scroll-smooth`}
         >
           <AppRoutes user={user} setUser={setUser} />
         </main>
@@ -364,8 +364,7 @@ export default function App() {
           hasPermission={hasPermission}
         />
       </div>
-
-      {/* 🌟 Modal 1: แจ้งเตือนเมื่อบัญชีโดนบล็อก (ความสำคัญสูงสุด) */}
+      
       {isBlocked && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
           <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center">

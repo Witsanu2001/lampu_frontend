@@ -9,7 +9,7 @@ import type { Order } from "../const/order";
 import { onValue, ref } from "firebase/database";
 import { db } from "../const/firebase";
 
-type OrderStatus = "new" | "preparing" | "ready" | "shipping";
+type OrderStatus = "new" | "preparing" | "ready" | "shipping" | "delivered";
 
 const getStatusConfig = (status: OrderStatus) => {
   const configs = {
@@ -49,12 +49,12 @@ const getStatusConfig = (status: OrderStatus) => {
       textColor: "text-indigo-700 dark:text-indigo-400",
       dotColor: "bg-indigo-500",
     },
-    // delivered: {
-    //   label: "ส่งสำเร็จ",
-    //   bgColor: "bg-emerald-50 dark:bg-emerald-500/10",
-    //   textColor: "text-emerald-700 dark:text-emerald-400",
-    //   dotColor: "bg-emerald-500",
-    // },
+    delivered: {
+      label: "ส่งสำเร็จ",
+      bgColor: "bg-emerald-50 dark:bg-emerald-500/10",
+      textColor: "text-emerald-700 dark:text-emerald-400",
+      dotColor: "bg-emerald-500",
+    },
     success: {
       label: "ส่งสำเร็จ",
       bgColor: "bg-emerald-50 dark:bg-emerald-500/10",
@@ -291,7 +291,7 @@ export default function OrderUserList() {
                       </div>
 
                       {order.equipment?.needEquipment && (
-                        <span className="shrink-0 bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400 px-2 py-0.5 rounded-md font-semibold border border-orange-100 dark:border-orange-800/30">
+                        <span className="px-2 bg-white/20 backdrop-blur-md border border-white/30 text-white font-bold rounded-md active:scale-95 transition-all flex items-center justify-center gap-2">
                           รับเตากระทะ{" "}
                           {Math.max(
                             order.equipment.stoveCount || 1,
