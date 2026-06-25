@@ -16,7 +16,7 @@ export default function BottomNav({
   if (!user || isPaymentPage) return null;
 
   return (
-    <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-blue-50 dark:bg-blue-900/20 border-t border-blue-100 dark:border-blue-800 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] flex justify-around items-center p-2">
+    <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-50 h-20 bg-blue-50 dark:bg-blue-900/20 border-t border-blue-100 dark:border-blue-800 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] flex justify-around items-center p-2">
       {menuConfig.filter(hasPermission).map((item, index) => {
         return (
           <NavLink
@@ -30,7 +30,7 @@ export default function BottomNav({
               }`
             }
           >
-            <div className="w-6 h-6 mb-1 relative flex justify-center items-center">
+            <div className="w-8 h-8 mb-2 relative flex justify-center items-center">
               {item.iconUrl ? (
                 <img
                   src={item.iconUrl}
