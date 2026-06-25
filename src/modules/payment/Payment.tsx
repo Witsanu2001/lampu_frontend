@@ -688,8 +688,7 @@ export default function Payment() {
                         className="w-5 h-5 text-blue-500 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
                       />
                       <span className="font-bold text-gray-800 dark:text-white">
-                        เปิดระบบคำนวณค่าจัดส่ง (ติ๊กเพื่อคิดเงิน / ไม่ติ๊ก =
-                        ส่งฟรี)
+                        เปิดระบบคำนวณค่าจัดส่ง
                       </span>
                     </label>
 
