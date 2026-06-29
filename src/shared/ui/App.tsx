@@ -212,17 +212,19 @@ export default function App() {
     try {
       const lineIdToken = liff.getIDToken();
       if (!lineIdToken)
-        throw new Error("ไม่พบ ID Token (ลืมเปิด openid ในระบบ LINE Developers หรือเปล่า?)");
+        throw new Error(
+          "ไม่พบ ID Token (ลืมเปิด openid ในระบบ LINE Developers หรือเปล่า?)",
+        );
 
       // 🚀 1. ยิง API ขอ Profile จาก LINE และ ยิง API ไป Backend ของคุณ "พร้อมกัน"
       const [profile, res] = await Promise.all([
         liff.getProfile(),
-        postLineAuth(lineIdToken)
+        postLineAuth(lineIdToken),
       ]);
 
       if (!profile) throw new Error("ดึง Profile จาก LINE ไม่สำเร็จ");
       if (!res.ok) throw new Error(`Backend ตอบกลับ Status: ${res.status}`);
-      
+
       const data = await res.json();
 
       if (!data.firebase_token)
@@ -304,7 +306,8 @@ export default function App() {
 
   const hasPermission = (item: MenuItem) => {
     if (!item.roles || item.roles.length === 0) return true;
-    return item.roles.includes(user?.role);
+    if (!user || !user.role) return false;
+    return item.roles.includes(user.role);
   };
 
   if (isAppLoading) {
@@ -312,7 +315,7 @@ export default function App() {
       <div className="flex flex-col h-screen w-full items-center justify-center bg-gray-50 dark:bg-gray-900">
         {/* วงกลมหมุนๆ */}
         <div className="w-10 h-10 border-4 border-gray-200 border-t-emerald-500 dark:border-gray-700 dark:border-t-emerald-400 rounded-full animate-spin mb-4 shadow-sm"></div>
-        
+
         {/* ข้อความกระพริบเบาๆ ให้ดูมีชีวิตชีวา */}
         <p className="text-gray-500 dark:text-gray-400 text-sm font-medium animate-pulse">
           กำลังเชื่อมต่อระบบ...
@@ -364,7 +367,7 @@ export default function App() {
           hasPermission={hasPermission}
         />
       </div>
-      
+
       {isBlocked && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
           <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center">

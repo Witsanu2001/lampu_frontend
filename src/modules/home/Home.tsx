@@ -131,45 +131,44 @@ export default function Home() {
             </div>
           ) : (
             // 🌟 ปรับ Grid ให้คอลัมน์น้อยลง = การ์ดใหญ่ขึ้น (max 3-4 คอลัมน์จอใหญ่) พร้อมเพิ่ม Gap เป็น gap-8
-            <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-4 2xl:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {mooKrataMenus.map((menu) => (
                 <div
                   key={menu.id}
                   className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col group"
                 >
-                  {/* 🌟 ปรับความสูงรูปภาพให้ใหญ่เต็มตา (h-64 มือถือ, h-72 จอใหญ่) */}
-                  <div className="aspect-[5/5] w-full overflow-hidden relative bg-gray-100 dark:bg-gray-700">
+                  {/* 🌟 2. ปรับสัดส่วนรูปเป็น aspect-[4/3] จะทำให้ดูเป็นผืนผ้าสวยกว่าจัตุรัสเดิม */}
+                  <div className="aspect-[4/3] w-full overflow-hidden relative bg-gray-50 dark:bg-gray-700 flex items-center justify-center">
                     <img
                       src={menu.image}
                       alt={menu.name}
+                      // 💡 ทริค: ถ้าอยากให้ "รูปแสดงเต็มใบ 100% ไม่โดนตัดขอบ" ให้เปลี่ยน object-cover เป็น object-contain ครับ
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
-                    <div className="absolute top-4 right-4 bg-emerald-500 text-white text-base font-bold px-4 py-1.5 rounded-full shadow-lg">
+                    <div className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-emerald-500 text-white text-sm sm:text-base font-bold px-3 py-1 sm:px-4 sm:py-1.5 rounded-full shadow-lg">
                       ฿{menu.price}
                     </div>
                   </div>
 
-                  <div className="p-6 flex flex-col flex-grow">
-                    {/* 🌟 ขยายขนาดชื่อเมนูเป็น text-xl */}
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-3 line-clamp-2">
+                  {/* 🌟 3. ปรับ Padding และ Font ให้ยืดหยุ่นตามหน้าจอ */}
+                  <div className="p-4 sm:p-6 flex flex-col flex-grow">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white mb-2 sm:mb-3 line-clamp-2">
                       {menu.name}
                     </h3>
 
-                    <div className="mb-6 flex-grow">
-                      {/* 🌟 ขยายขนาดคำอธิบายเป็น text-base */}
-                      <p className="text-base text-gray-500 dark:text-gray-400 line-clamp-3">
+                    <div className="mb-4 sm:mb-6 flex-grow">
+                      <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 line-clamp-3">
                         {menu.description || "ไม่มีรายละเอียดเมนู"}
                       </p>
                     </div>
 
-                    {/* 🌟 ขยายปุ่มให้ใหญ่ขึ้น (py-3) และตัวหนังสือใหญ่ขึ้น */}
                     <button
                       onClick={(e) => handleAddToCart(e, menu)}
-                      className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-base font-semibold rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-auto"
+                      className="w-full py-2.5 sm:py-3 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-sm sm:text-base font-semibold rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 mt-auto"
                     >
                       <span>สั่งชุดนี้</span>
                       <svg
-                        className="w-6 h-6"
+                        className="w-5 h-5 sm:w-6 sm:h-6"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"

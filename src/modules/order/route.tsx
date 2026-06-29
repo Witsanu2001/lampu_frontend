@@ -1,15 +1,16 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Route} from "react-router-dom";
 import OrderList from "./OrderList";
 import OrderDetail from "./OrderDetail";
 import { ProtectedRoute } from "../../shared/middlewares/ProtectedRoute";
 
-export const orderRoutes = () => (
+export const orderRoutes = (user: any) => (
   <>
     <Route 
       key="order"
       path="/orders" 
       element={
-        <ProtectedRoute>
+        <ProtectedRoute allowedRoles={['admin']} userRole={user?.role}>
           <OrderList />
         </ProtectedRoute>
       }
@@ -19,7 +20,7 @@ export const orderRoutes = () => (
       key="order-detail"
       path="/orders/:orderId" 
       element={
-        <ProtectedRoute>
+        <ProtectedRoute allowedRoles={['admin']} userRole={user?.role}>
           <OrderDetail />
         </ProtectedRoute>
       }

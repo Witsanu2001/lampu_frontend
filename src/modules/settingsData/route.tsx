@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Route } from "react-router-dom";
 import Dashboard from "./dashboards/Dashboard";
 import UserSetting from "./users/UserSetting";
@@ -7,13 +8,14 @@ import { ProtectedRoute } from "../../shared/middlewares/ProtectedRoute";
 import Settingsdata from ".";
 import SystemPage from "./systems/SystemPage";
 
-export const settingsDataRoutes = () => (
+export const settingsDataRoutes = (user: any) => (
   <>
     <Route
       key="settingsData"
       path="/settingsData"
       element={
-        <ProtectedRoute>
+        // ส่ง allowedRoles และ userRole เข้าไปเช็ค
+        <ProtectedRoute allowedRoles={["admin"]} userRole={user?.role}>
           <Settingsdata />
         </ProtectedRoute>
       }
@@ -22,7 +24,7 @@ export const settingsDataRoutes = () => (
       key="dashboard"
       path="/settingsData/dashboards"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute allowedRoles={["admin"]} userRole={user?.role}>
           <Dashboard />
         </ProtectedRoute>
       }
@@ -31,7 +33,7 @@ export const settingsDataRoutes = () => (
       key="users"
       path="/settingsData/users"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute allowedRoles={["admin"]} userRole={user?.role}>
           <UserSetting />
         </ProtectedRoute>
       }
@@ -40,7 +42,7 @@ export const settingsDataRoutes = () => (
       key="menu"
       path="/settingsData/menu"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute allowedRoles={["admin"]} userRole={user?.role}>
           <MenuSetting />
         </ProtectedRoute>
       }
@@ -49,7 +51,7 @@ export const settingsDataRoutes = () => (
       key="orders"
       path="/settingsData/orders"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute allowedRoles={["admin"]} userRole={user?.role}>
           <OrderSetting />
         </ProtectedRoute>
       }
@@ -58,7 +60,7 @@ export const settingsDataRoutes = () => (
       key="systems"
       path="/settingsData/systems"
       element={
-        <ProtectedRoute>
+        <ProtectedRoute allowedRoles={["admin"]} userRole={user?.role}>
           <SystemPage />
         </ProtectedRoute>
       }
