@@ -1,6 +1,9 @@
 export const DEFAULT_DELIVERY_FEE = 10;
 export const DEFAULT_MEET_UP_FEE = 20;
 
+export const COLOR_SYSTEME_1 = 'blue'
+export const COLOR_SYSTEME_2 = 'orange'
+
 export const DEFAULT_STOVE = 30;
 export const DEFAULT_PAN = 20;
 export const DEFAULT_CHACOAL = 10;

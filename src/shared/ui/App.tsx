@@ -2,7 +2,7 @@
 /* eslint-disable react-hooks/immutability */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/shared/ui/App.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { auth } from "../../modules/const/firebase";
 import {
@@ -22,6 +22,7 @@ import { postLineAuth, postUsersSync } from "../../modules/api/api_login";
 import { AppRoutes } from "../../app/routes";
 import BottomNav from "./BottomNav";
 import { setToken } from "../infra/auth/token";
+import { Loading } from "../components/Loading";
 
 const LIFF_ID = "2010209102-zHsx4M0r";
 const PROJECT_NAME = "thungyai";
@@ -37,10 +38,11 @@ export default function App() {
   const location = useLocation();
   const isPaymentPage =
     location.pathname === "/orders/payment" ||
-    /^\/orders_user\/[^/]+$/.test(location.pathname) ||
-    /^\/orders\/[^/]+$/.test(location.pathname) ||
-    /^\/settingsData\/[^/]+$/.test(location.pathname) ||
-    /^\/listData\/history\/detail\/[^/]+$/.test(location.pathname);
+    location.pathname.startsWith("/orders_user/") ||
+    location.pathname.startsWith("/orders/") ||
+    location.pathname.startsWith("/settingsData/") ||
+    location.pathname.startsWith("/listData/history") ||
+    location.pathname.startsWith("/job_detail/");
 
   const [isAppLoading, setIsAppLoading] = useState(true);
 
@@ -49,6 +51,8 @@ export default function App() {
   const [isStoreOpen, setIsStoreOpen] = useState<boolean>(true);
   const [isBlocked, setIsBlocked] = useState<boolean>(false);
   const [blockedUid, setBlockedUid] = useState<string>("");
+
+  const [isTokenUpdating, setIsTokenUpdating] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -153,16 +157,14 @@ export default function App() {
       }
     };
 
-    calculateStoreStatus(); // คำนวณครั้งแรก
-    const interval = setInterval(calculateStoreStatus, 60000); // รีรันทุก 1 นาที (60,000 ms)
+    calculateStoreStatus();
+    const interval = setInterval(calculateStoreStatus, 60000);
 
     return () => clearInterval(interval);
   }, [storeSettings]);
 
   useEffect(() => {
-    // ใช้เงื่อนไขให้กระชับ
     if (isBlocked && location.pathname !== "/login") {
-      // ใช้ setTimeout เพื่อให้ React ทำงานในรอบถัดไป (หลีกเลี่ยง error cascading render)
       const timer = setTimeout(() => {
         localStorage.removeItem("userData");
         setUser(null);
@@ -173,25 +175,47 @@ export default function App() {
     }
   }, [isBlocked, location.pathname, navigate]);
 
+  const isFirstLoad = useRef(true);
+
   useEffect(() => {
+    // 🌟 2. ถ้าไม่ใช่การโหลดครั้งแรก ให้ข้ามไปเลย! (ไม่รันโค้ดข้างล่างซ้ำ)
+    if (!isFirstLoad.current) return;
+    
     const initializeSystem = async () => {
+      isFirstLoad.current = false; // มาร์คว่าทำงานครั้งแรกไปแล้วนะ
+
       try {
-        // 🌟 1. เช็ค LocalStorage ก่อนเลยว่ามีของไหม (เร็วที่สุด)
         const savedUserStr = localStorage.getItem("userData");
 
-        // 🌟 2. สร้าง Promise เช็ค Firebase State
-        const fbUser = await new Promise<any>((resolve) => {
-          const unsubscribe = onAuthStateChanged(auth, (u) => {
-            unsubscribe();
-            resolve(u);
-          });
-        });
-        if (fbUser && savedUserStr) {
+        if (savedUserStr) {
+          // มีประวัติล็อกอิน -> โชว์หน้าเว็บเลย
           setUser(JSON.parse(savedUserStr));
-          setIsAppLoading(false);
-          fbUser.getIdToken(true).then((token: string) => setToken(token, 24));
+          setIsAppLoading(false); 
+          
+          // โชว์ Loading โปร่งแสง (จะแสดงแค่ครั้งเดียวตอนเปิดแอป)
+          setIsTokenUpdating(true); 
+
+          // รอ Firebase ยืนยัน Token ล่าสุด
+          const fbUser = await new Promise<any>((resolve) => {
+            const unsubscribe = onAuthStateChanged(auth, (u) => {
+              unsubscribe();
+              resolve(u);
+            });
+          });
+
+          if (fbUser) {
+            const token = await fbUser.getIdToken(true);
+            setToken(token, 24);
+            setIsTokenUpdating(false); // เอา Loading ออก
+          } else {
+            localStorage.removeItem("userData");
+            setUser(null);
+            navigate("/login");
+          }
           return;
         }
+
+        // กรณีผู้ใช้ใหม่...
         await liff.init({ liffId: LIFF_ID });
 
         if (liff.isLoggedIn()) {
@@ -202,11 +226,12 @@ export default function App() {
       } catch (err) {
         console.error("System Init Error:", err);
         setIsAppLoading(false);
+        setIsTokenUpdating(false);
       }
     };
 
     initializeSystem();
-  }, []);
+  }, [navigate]);
 
   const handleLineUserData = async () => {
     try {
@@ -310,10 +335,7 @@ export default function App() {
   if (isAppLoading) {
     return (
       <div className="flex flex-col h-screen w-full items-center justify-center bg-gray-50 dark:bg-gray-900">
-        {/* วงกลมหมุนๆ */}
         <div className="w-10 h-10 border-4 border-gray-200 border-t-emerald-500 dark:border-gray-700 dark:border-t-emerald-400 rounded-full animate-spin mb-4 shadow-sm"></div>
-        
-        {/* ข้อความกระพริบเบาๆ ให้ดูมีชีวิตชีวา */}
         <p className="text-gray-500 dark:text-gray-400 text-sm font-medium animate-pulse">
           กำลังเชื่อมต่อระบบ...
         </p>
@@ -323,7 +345,11 @@ export default function App() {
 
   return (
     <div className="h-screen w-full flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden relative">
-      {user && !isPaymentPage && <Header user={user} setUser={setUser} />}
+      {user && <Header user={user} setUser={setUser} />}
+
+      {isTokenUpdating && (
+        <Loading message="กำลังอัปเดตข้อมูลเซสชัน..." />
+      )}
 
       <div className="flex flex-1 overflow-hidden relative">
         {user && !isPaymentPage && (

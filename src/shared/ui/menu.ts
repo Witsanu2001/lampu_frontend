@@ -43,33 +43,6 @@ export const menuConfig: MenuItem[] = [
     label: "จัดการระบบ",
     to: "/settingsData",
     iconUrl: UserSetting,
-    roles: ["admin"],
-    submenu: [
-      {
-        label: "แดชบอร์ดข้อมูล",
-        to: "/settingsData/dashboards",
-        roles: ["admin"],
-      },
-      {
-        label: "จัดการผู้ใช้งาน",
-        to: "/settingsData/users",
-        roles: ["admin"],
-      },
-      {
-        label: "จัดการเมนู",
-        to: "/settingsData/menu",
-        roles: ["admin"],
-      },
-      {
-        label: "จัดการออเดอร์",
-        to: "/settingsData/orders",
-        roles: ["admin"],
-      },
-      {
-        label: "จัดการระบบร้าน",
-        to: "/settingsData/systems",
-        roles: ["admin"],
-      },
-    ],
+    roles: ["admin"]
   },
 ];

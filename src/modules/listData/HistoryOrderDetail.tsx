@@ -136,26 +136,6 @@ export default function HistoryOrderDetail() {
     <div className="h-full p-6 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 relative">
       {/* Header */}
       <div className="mb-6">
-        <button
-          onClick={() => navigate("/listData/history")}
-          className="flex items-center text-2xl text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 mb-3"
-        >
-          <svg
-            className="w-6 h-6 mt-1"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          รายละเอียดออเดอร์
-        </button>
-
         <div className="flex flex-wrap w-full items-center justify-between gap-x-4 gap-y-1">
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 whitespace-nowrap">
             เลขที่ออเดอร์: {order.id}

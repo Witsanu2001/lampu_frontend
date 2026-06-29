@@ -6,6 +6,8 @@ import liff from "@line/liff";
 import { useCart } from "../context/CartContext";
 import CartModal from "../components/CartModal";
 import defaultAvatar from "../../assets/profile.png";
+import { useLocation, useNavigate } from "react-router-dom";
+import { COLOR_SYSTEME_1 } from "../const/config";
 
 interface HeaderProps {
   user: any;
@@ -23,8 +25,44 @@ export default function Header({ user, setUser }: HeaderProps) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isBouncing, setIsBouncing] = useState(false);
 
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const LOGO_URL =
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRSFvdyWq2xH0rP3uHBFHY6WP5tKMUx74VJ8g&s";
+
+  const getHeaderConfig = (pathname: string) => {
+    // 🌟 1. สลับเอาตัวที่เจาะลึกกว่า (detail) ขึ้นก่อน ไม่งั้นจะโดนเงื่อนไขถัดไปดักตัดหน้าเสมอ
+    if (pathname.includes("/listData/history/detail")) {
+      return { title: "รายละเอียดออเดอร์", backTo: "/listData/history" };
+    }
+    
+    // 🌟 2. หน้าประวัติออเดอร์ (เมื่อกดกลับจะไปหน้าเมนูหลัก /listData)
+    if (pathname.includes("/listData/history")) {
+      return { title: "ประวัติการสั่งซื้อ", backTo: "/listData" };
+    }
+    
+    if (pathname.includes("/orders_user/") && pathname.split("/").length > 2) {
+      return { title: "รายละเอียดออเดอร์", backTo: "/orders_user" };
+    }
+    
+    if (
+      pathname.includes("/orders/") &&
+      !pathname.includes("payment") &&
+      pathname.split("/").length > 2
+    ) {
+      return { title: "รายละเอียดออเดอร์", backTo: "/orders" };
+    }
+    
+    if (pathname.includes("/job_detail/")) {
+      return { title: "รายละเอียดงาน", backTo: -1 }; 
+    }
+
+    // ถ้าไม่ตรงกับเงื่อนไขด้านบนเลย ให้คืนค่า null (แสดง Logo ปกติ)
+    return null;
+  };
+
+  const pageConfig = getHeaderConfig(location.pathname);
 
   useEffect(() => {
     if (cartCount > 0) {
@@ -87,16 +125,36 @@ export default function Header({ user, setUser }: HeaderProps) {
   return (
     <>
       <header className="sticky top-0 z-50 bg-blue-50 dark:bg-blue-900/20 shadow-sm px-4 py-3 flex justify-between items-center border-b border-blue-100 dark:border-blue-800 transition-colors duration-300">
-        <div className="flex items-center gap-2">
-          <img
-            src={LOGO_URL}
-            alt="Logo"
-            className="w-8 h-8 rounded-full object-cover"
-          />
-          <strong className="hidden md:block text-lg text-gray-800 dark:text-gray-100 tracking-wide">
-            Lampu Moo Krata
-          </strong>
-        </div>
+        
+        {pageConfig ? (
+          <button
+            onClick={() => {
+              if (typeof pageConfig.backTo === "number") {
+                navigate(pageConfig.backTo);
+              } else {
+                navigate(pageConfig.backTo);
+              }
+            }}
+            className={`flex items-center text-lg md:text-xl font-bold text-gray-600 dark:text-gray-300 hover:text-${COLOR_SYSTEME_1}-600 dark:hover:text-${COLOR_SYSTEME_1}-400 transition-colors`}
+          >
+            <svg
+              className="w-6 h-6 mr-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            {pageConfig.title}
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <img src={LOGO_URL} alt="Logo" className="w-8 h-8 rounded-full object-cover" />
+            <strong className="hidden md:block text-lg text-gray-800 dark:text-gray-100 tracking-wide">
+              Lampu Moo Krata
+            </strong>
+          </div>
+        )}
 
         <div className="flex items-center gap-3 sm:gap-4">
           <button

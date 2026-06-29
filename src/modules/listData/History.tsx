@@ -8,6 +8,7 @@ import { getOrderUserById } from "../api/api_order";
 import type { Order } from "../const/order";
 import { onValue, ref } from "firebase/database";
 import { db } from "../const/firebase";
+import { COLOR_SYSTEME_1, COLOR_SYSTEME_2 } from "../../shared/const/config";
 
 export default function HistoryData() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -115,28 +116,6 @@ export default function HistoryData() {
 
   return (
     <div className="h-full w-full flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 overflow-hidden">
-      {/* Header แบบกระทัดรัด */}
-      <div className="shrink-0 px-5 pt-5 pb-3 border-b border-gray-200 dark:border-gray-800 z-10 bg-white dark:bg-gray-900 shadow-sm">
-        <button
-          onClick={() => navigate("/listData")}
-          className="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 mb-3"
-        >
-          <svg
-            className="w-4 h-4 mr-1"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          ประวัติการสั่งซื้อ
-        </button>
-      </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {orders.length === 0 ? (
@@ -234,7 +213,7 @@ export default function HistoryData() {
 
                       {/* สถานะอุปกรณ์ รับเตากระทะ */}
                       {order.equipment?.needEquipment && (
-                        <span className="shrink-0 bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400 px-2 py-0.5 rounded-md font-semibold border border-orange-100 dark:border-orange-800/30">
+                        <span className={`shrink-0 bg-${COLOR_SYSTEME_2}-50 text-${COLOR_SYSTEME_2}-600 dark:bg-${COLOR_SYSTEME_2}-500/10 dark:text-${COLOR_SYSTEME_2}-400 px-2 py-0.5 rounded-md font-semibold border border-${COLOR_SYSTEME_2}-100 dark:border-${COLOR_SYSTEME_2}-800/30`}>
                           รับเตากระทะ{" "}
                           {Math.max(
                             order.equipment.stoveCount || 1,
@@ -258,7 +237,7 @@ export default function HistoryData() {
                               ? order.payment.method.toUpperCase()
                               : "ไม่ระบุ"}
                       </span>
-                      <span className="text-lg font-black text-orange-500 dark:text-orange-400 leading-none">
+                      <span className={`text-lg font-black text-${COLOR_SYSTEME_1}-500 dark:text-${COLOR_SYSTEME_1}-400 leading-none`}>
                         ฿{order.totals?.grandTotal?.toLocaleString()}
                       </span>
                     </div>
