@@ -24,11 +24,11 @@ export const AppRoutes = ({ user, setUser }: { user: any, setUser: any }) => {
       />
       {loginRoutes(user, setUser)}
       {homeRoutes()}
-      {orderRoutes()}
+      {orderRoutes(user)}
       {orderUserRoutes()}
       {paymentRoutes()}
       {addressRoutes()}
-      {settingsDataRoutes()}
+      {settingsDataRoutes(user)}
       {listsDataRoutes()}
     </Routes>
   );

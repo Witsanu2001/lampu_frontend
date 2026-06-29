@@ -145,6 +145,7 @@ export default function Payment() {
 
           if (defaultLocation) {
             setShippingAddress(defaultLocation);
+            setIsMeetup(defaultLocation.isMeetup || false);
           }
         }
       } catch (error) {
@@ -1064,7 +1065,7 @@ export default function Payment() {
               </div>
             )}
 
-            {!isMeetup == true && (
+            {!isMeetup && (
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
                   อุปกรณ์สำหรับปิ้งย่าง 🍳

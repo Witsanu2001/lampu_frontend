@@ -62,7 +62,7 @@ export default function OrderUserDetail() {
     }
   };
 
-  // 🌟 ฟังก์ชันกดส่งสลิปใหม่
+  const apiUrl = import.meta.env.VITE_API_URL;
   const handleResubmitSlip = async () => {
     if (!slipFile || !orderId) return;
 
@@ -75,7 +75,7 @@ export default function OrderUserDetail() {
       // ยิง API
       const token = await getFreshToken();
       const response = await fetch(
-        `http://localhost:8080/api/orders/orders_put/${orderId}/edit_slip`,
+        `${apiUrl}/api/orders/orders_put/${orderId}/edit_slip`,
         {
           method: "PUT",
           headers: {
@@ -130,7 +130,7 @@ export default function OrderUserDetail() {
   // เงื่อนไขตรวจสอบว่าต้องโชว์ UI ให้อัปสลิปใหม่หรือไม่
   const isRejectedPayment =
     order.status === "refuse" &&
-    order.cancel_reason === "การชำระเงินไม่ถูกต้อง";
+    order.cancel_reason === "การชำระเงินไม่ถูกต้อง กรุณาแก้ไขชำระเงินให้ถูกต้อง";
 
   return (
     <div className="h-full p-6 w-full overflow-y-auto bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 relative">
